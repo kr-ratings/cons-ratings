@@ -2,6 +2,8 @@
 
 대한건설협회 시공능력평가(도급순위) 상위 100개사와 신용평가 3사(한국신용평가·한국기업평가·나이스신용평가) 회사채(선순위) 등급을 한 화면에 보여 주는 정적 사이트입니다. 디자인은 [유동화시장 등급 · 금리 현황 대시보드](https://daily-ratings.pages.dev/)와 같은 토큰을 씁니다.
 
+사이트: https://cons-ratings.pages.dev (Cloudflare Pages) · https://kr-ratings.github.io/cons-ratings/ (GitHub Pages)
+
 ## 구성
 
 | 경로 | 내용 |
