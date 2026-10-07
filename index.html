@@ -100,7 +100,7 @@ input[type=checkbox]{accent-color:var(--accent)}
 .count{margin-left:auto;font-size:.82rem;color:var(--muted)}
 
 .table-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:78vh}
-table{width:100%;border-collapse:collapse;font-size:.84rem}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:.84rem}
 th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
 /* 남는 폭은 마지막 열(NICE)이 흡수 → 나머지 열은 내용 폭에 맞춤 */
 th:last-child,td:last-child{width:100%}
@@ -115,8 +115,14 @@ td.ag1,th.ag1{border-left:1px solid var(--line)}
 tbody tr:last-child td{border-bottom:0}
 tbody tr:hover td{background:var(--accent-soft)}
 td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
-td.rank{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:600;text-align:right;width:3.2em}
-td.prev{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+td.rank{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+/* 순위·전년 대비·회사명 열 고정: 표를 옆으로 밀어도 왼쪽에 남는다 */
+.s1,.s2,.s3{position:sticky;background:var(--surface);z-index:1}
+th.s1,th.s2,th.s3{z-index:3}
+.s1{left:0;width:56px;min-width:56px;max-width:56px}
+.s2{left:56px;width:84px;min-width:84px;max-width:84px}
+.s3{left:140px;box-shadow:inset -1px 0 0 var(--line)}
+.table-box.scrolled .s3{box-shadow:inset -1px 0 0 var(--line),6px 0 8px -6px rgba(0,0,0,.18)}
 td.mv{font-family:var(--f-mono);font-size:.8rem;font-variant-numeric:tabular-nums}
 td.mv.up{color:var(--up)} td.mv.down{color:var(--down)} td.mv.flat{color:var(--flat)}
 td.co{font-weight:600}
@@ -161,6 +167,12 @@ footer a:hover{text-decoration:underline}
   .hright{align-items:flex-start}
   .updated{text-align:left}
   td.amt .bar{width:48px}
+  td.co{white-space:normal;word-break:keep-all;min-width:7.5em;max-width:9em}
+  td.co small{display:block;margin-left:0}
+  .s1{width:44px;min-width:44px;max-width:44px;padding-inline:6px 8px}
+  .s2{left:44px;width:62px;min-width:62px;max-width:62px;padding-inline:6px}
+  .s3{left:106px}
+  th.s1,td.s1{padding-left:6px}
 }
 </style>
 </head>
@@ -229,17 +241,16 @@ footer a:hover{text-decoration:underline}
     <div class="table-box">
       <table>
         <thead><tr id="thead">
-          <th data-k="rank" aria-sort="ascending"><button type="button">순위</button></th>
-          <th data-k="mv"><button type="button">전년 대비</button></th>
-          <th class="num" data-k="prev"><button type="button">전년</button></th>
-          <th data-k="name"><button type="button">회사명</button></th>
+          <th class="s1" data-k="rank" aria-sort="ascending"><button type="button">순위</button></th>
+          <th class="s2" data-k="mv"><button type="button">전년 대비</button></th>
+          <th class="s3" data-k="name"><button type="button">회사명</button></th>
           <th class="num" data-k="amount"><button type="button">시공능력 평가액(억원)</button></th>
           <th data-k="best"><button type="button">최고등급</button></th>
           <th class="ag1" data-k="KIS" title="한국신용평가"><button type="button">KIS 한신평</button></th>
           <th data-k="KR" title="한국기업평가"><button type="button">KR 한기평</button></th>
           <th data-k="NICE" title="나이스신용평가"><button type="button">NICE</button></th>
         </tr></thead>
-        <tbody id="tbody"><tr><td colspan="9" class="empty">불러오는 중…</td></tr></tbody>
+        <tbody id="tbody"><tr><td colspan="8" class="empty">불러오는 중…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -383,10 +394,9 @@ function rowHTML(r){
   const mvt=r.mv==null?"신규":r.mv>0?`▲${r.mv}`:r.mv<0?`▼${-r.mv}`:"–";
   const b=bestOf(r);
   return `<tr>
-    <td class="rank">${r.rank}</td>
-    <td class="mv ${mvc}">${mvt}</td>
-    <td class="prev">${r.prev??"-"}</td>
-    <td class="co">${esc(r.name)}${r.region?`<small>${esc(r.region)}</small>`:""}</td>
+    <td class="rank s1">${r.rank}</td>
+    <td class="mv s2 ${mvc}" title="${r.prev!=null?`전년 ${r.prev}위 → 올해 ${r.rank}위`:"전년 순위 없음"}">${mvt}</td>
+    <td class="co s3">${esc(r.name)}${r.region?`<small>${esc(r.region)}</small>`:""}</td>
     <td class="num amt"><span title="${esc(amtTip(r))}">${fmtAmt(r.amount)}</span><span class="bar" aria-hidden="true"><i style="width:${(r.amount/MAX*100).toFixed(2)}%"></i></span></td>
     <td>${b?`<span class="best grade ${gcls(b)}">${esc(clean(b.grade))}</span>${kdTag(b.kind)}`:'<span class="dim">–</span>'}</td>
     ${AG.map((a,i)=>ratingCell(r,a,i===0)).join("")}</tr>`;
@@ -419,7 +429,7 @@ function render(){
     return true;
   }).sort(cmp);
   $("#count").textContent=`${rows.length}개사 / 전체 ${ROWS.length}개사`;
-  $("#tbody").innerHTML=rows.length?rows.map(rowHTML).join(""):'<tr><td colspan="9" class="empty">조건에 맞는 건설사가 없습니다. 필터를 바꿔 보세요.</td></tr>';
+  $("#tbody").innerHTML=rows.length?rows.map(rowHTML).join(""):'<tr><td colspan="8" class="empty">조건에 맞는 건설사가 없습니다. 필터를 바꿔 보세요.</td></tr>';
   document.querySelectorAll("#thead th[data-k]").forEach(th=>th.setAttribute("aria-sort",th.dataset.k===state.sort?(state.dir>0?"ascending":"descending"):"none"));
 }
 function bindSeg(id,key){
@@ -428,6 +438,7 @@ function bindSeg(id,key){
     state[key]=b.dataset.v; render();
   }));
 }
+(()=>{const tb=document.querySelector(".table-box"); tb.addEventListener("scroll",()=>tb.classList.toggle("scrolled",tb.scrollLeft>0),{passive:true});})();
 bindSeg("seg-band","band"); bindSeg("seg-mv","mv"); bindSeg("seg-scope","scope");
 $("#f-grade").addEventListener("change",e=>{state.grade=e.target.value;render()});
 $("#f-agency").addEventListener("change",e=>{state.agency=e.target.value;render()});
@@ -444,7 +455,7 @@ document.querySelectorAll("#thead th[data-k] button").forEach(b=>b.addEventListe
   renderStatus(S);
   if(!D||!D.rows){
     $("#kpis").innerHTML='<div class="placeholder">데이터를 불러오지 못했습니다. 새로고침해 보세요.</div>';
-    $("#tbody").innerHTML='<tr><td colspan="9" class="empty">데이터를 불러오지 못했습니다.</td></tr>';
+    $("#tbody").innerHTML='<tr><td colspan="8" class="empty">데이터를 불러오지 못했습니다.</td></tr>';
     $("#updated").textContent="데이터 없음"; return;
   }
   ROWS=D.rows.map(r=>({...r,mv:r.prev!=null?r.prev-r.rank:null}));
