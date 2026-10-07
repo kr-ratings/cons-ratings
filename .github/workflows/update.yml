@@ -1,0 +1,34 @@
+name: 주간 데이터 갱신
+
+on:
+  schedule:
+    - cron: "10 22 * * 0"   # 매주 월요일 07:10 KST (일요일 22:10 UTC)
+  workflow_dispatch: {}     # Actions 탭에서 'Run workflow'로 즉시 실행
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests beautifulsoup4 openpyxl
+      - name: 원 출처에서 수집
+        run: python collector/collect.py
+      - name: 바뀐 데이터 커밋
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898313+github-actions[bot]@users.noreply.github.com"
+          git add data/
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git commit -m "data: $(TZ=Asia/Seoul date '+%Y-%m-%d %H:%M') 주간 갱신"
+          git push

@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시공사 시공능력평가 · 신용등급 현황 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: 단일 컬럼 대시보드 — 상단 요약 3칸 패널(평가액·등급 분포·순위 변동), 필터 바 + 시평 순위·등급 표
+   토큰은 '유동화시장 등급 · 금리 현황 대시보드'(daily-ratings)와 동일하게 유지 */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --line:#dfe2e8; --fg:#1b2230; --muted:#5d6678;
+  --accent:#2747a8; --accent-soft:#e8edf9;
+  --up:#c8302f; --down:#2453c4; --flat:#6b7383;
+  --spark:#2747a8; --spark-fill:rgba(39,71,168,.10);
+  --g-a1:#1f7a4d; --g-a2:#4c7a1f; --g-a3:#a26a00; --g-b:#b3401f;
+  --ok:#1f7a4d; --bad:#b3401f; --pf:#7a3fa8; --pf-bg:#f3ebfa;
+  --seg1:#2747a8; --seg2:#5f78c4; --seg3:#9aabdc; --seg4:#cdd6ee;
+  --f-sans:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#11151d; --surface:#181e29; --line:#2a3242; --fg:#e6e9ef; --muted:#97a0b2;
+  --accent:#8ea8ff; --accent-soft:#1f2a45;
+  --up:#ff7a72; --down:#7aa2ff; --flat:#8b93a3;
+  --spark:#8ea8ff; --spark-fill:rgba(142,168,255,.14);
+  --g-a1:#5fd19a; --g-a2:#a6d16a; --g-a3:#f0bb4a; --g-b:#ff8a63;
+  --ok:#5fd19a; --bad:#ff8a63; --pf:#d2a6ff; --pf-bg:#2c2140;
+  --seg1:#8ea8ff; --seg2:#6680cc; --seg3:#46599a; --seg4:#2e3a5e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11151d; --surface:#181e29; --line:#2a3242; --fg:#e6e9ef; --muted:#97a0b2;
+  --accent:#8ea8ff; --accent-soft:#1f2a45;
+  --up:#ff7a72; --down:#7aa2ff; --flat:#8b93a3;
+  --spark:#8ea8ff; --spark-fill:rgba(142,168,255,.14);
+  --g-a1:#5fd19a; --g-a2:#a6d16a; --g-a3:#f0bb4a; --g-b:#ff8a63;
+  --ok:#5fd19a; --bad:#ff8a63; --pf:#d2a6ff; --pf-bg:#2c2140;
+  --seg1:#8ea8ff; --seg2:#6680cc; --seg3:#46599a; --seg4:#2e3a5e; color-scheme:dark}
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-sans);font-size:14px;line-height:1.5}
+.wrap{max-width:1680px;margin:0 auto;padding-inline:16px;padding-block:24px 40px;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
+h1{font-size:1.45rem;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--muted);font-size:.85rem;margin:2px 0 0}
+.hright{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.updated{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);text-align:right}
+.sister{font-size:.76rem;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:3px 9px}
+.sister:hover{background:var(--accent-soft)}
+.sister:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+h2{font-size:.78rem;font-weight:600;letter-spacing:.08em;color:var(--muted);margin:0}
+.sec-head{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.sec-head .note{font-size:.78rem;color:var(--muted)}
+
+/* 요약 패널 — daily-ratings의 시장금리 3칸 패널과 같은 골격 */
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.kpi{padding:16px 18px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.kpi + .kpi{border-left:1px solid var(--line)}
+.kpi .name{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.kpi .name b{font-weight:600;font-size:.95rem}
+.kpi .name span{font-size:.72rem;color:var(--muted)}
+.kpi .val{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.kpi .num{font-family:var(--f-mono);font-size:1.9rem;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.kpi .num small{font-size:.9rem;color:var(--muted);margin-left:2px}
+.chg{font-family:var(--f-mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.chg.up{color:var(--up)} .chg.down{color:var(--down)} .chg.flat{color:var(--flat)}
+.stack{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--line);gap:1px}
+.stack span{display:block;height:100%;min-width:2px}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.72rem;color:var(--muted);font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.mvsum{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding-block:6px 4px}
+.mvsum .chg{font-family:var(--f-sans);font-size:1rem;font-weight:500}
+.mvsum .chg b{font-family:var(--f-mono);font-size:1.6rem;font-weight:500;letter-spacing:-.02em;margin:0 2px 0 4px;font-variant-numeric:tabular-nums}
+.movers{display:grid;grid-template-columns:auto 1fr auto;column-gap:10px;row-gap:3px;font-size:.8rem;align-items:baseline}
+.movers .lb{color:var(--muted);font-size:.72rem;white-space:nowrap}
+.movers b{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.movers .mv{font-family:var(--f-mono);font-size:.78rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.spreads{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:10px;font-size:.8rem;color:var(--muted)}
+.spreads b{font-family:var(--f-mono);font-weight:500;color:var(--fg)}
+.placeholder{padding:22px;color:var(--muted);grid-column:1/-1}
+
+.status{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.76rem;color:var(--muted);align-items:center}
+.status .src{display:inline-flex;align-items:center;gap:5px}
+.status .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.status .src.bad .dot{background:var(--bad)}
+
+.filters{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:10px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{all:unset;cursor:pointer;padding:6px 13px;font-size:.85rem;color:var(--muted)}
+.seg button + button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.seg button:focus-visible,select:focus-visible,input:focus-visible,th button:focus-visible,.info summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+label.f{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--muted)}
+select,input[type=search]{font:inherit;font-size:.85rem;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+input[type=search]{min-width:0;width:210px}
+input[type=checkbox]{accent-color:var(--accent)}
+.count{margin-left:auto;font-size:.82rem;color:var(--muted)}
+
+.table-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:78vh}
+table{width:100%;border-collapse:collapse;font-size:.84rem}
+th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
+/* 남는 폭은 마지막 열(NICE)이 흡수 → 나머지 열은 내용 폭에 맞춤 */
+th:last-child,td:last-child{width:100%}
+th:first-child,td:first-child{padding-left:12px}
+th{font-size:.74rem;font-weight:600;color:var(--muted);background:var(--surface);position:sticky;top:0;z-index:1}
+th button{all:unset;cursor:pointer}
+th button::after{content:"";margin-left:4px}
+th[aria-sort="ascending"] button::after{content:"▲"}
+th[aria-sort="descending"] button::after{content:"▼"}
+th.grp{text-align:left;border-left:1px solid var(--line)}
+td.ag1,th.ag1{border-left:1px solid var(--line)}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--accent-soft)}
+td.num,th.num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+td.rank{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:600;text-align:right;width:3.2em}
+td.prev{font-family:var(--f-mono);font-variant-numeric:tabular-nums;color:var(--muted);text-align:right}
+td.mv{font-family:var(--f-mono);font-size:.8rem;font-variant-numeric:tabular-nums}
+td.mv.up{color:var(--up)} td.mv.down{color:var(--down)} td.mv.flat{color:var(--flat)}
+td.co{font-weight:600}
+td.co small{font-weight:400;color:var(--muted);font-size:.74rem;margin-left:6px}
+.ol{font-size:.68rem;font-weight:600;padding:1px 5px;border-radius:4px;border:1px solid currentColor;line-height:1.3}
+.kd{font-family:var(--f-mono);font-size:.66rem;font-weight:500;color:var(--muted);border:1px solid var(--line);border-radius:4px;padding:0 4px;line-height:1.4;margin-left:4px}
+.ol.neg{color:var(--g-b)} .ol.pos{color:var(--g-a1)} .ol.watch{color:var(--g-a3)}
+td.amt{display:flex;align-items:center;justify-content:flex-end;gap:10px}
+td.amt .bar{width:90px;height:6px;background:var(--line);border-radius:3px;overflow:hidden;flex:none}
+td.amt .bar i{display:block;height:100%;background:var(--spark);opacity:.75;min-width:1px}
+.grade{font-family:var(--f-mono);font-weight:600;font-size:.82rem}
+.g-a1{color:var(--g-a1)} .g-a2{color:var(--g-a2)} .g-a3{color:var(--g-a3)} .g-b{color:var(--g-b)}
+.best{font-family:var(--f-mono);font-size:.78rem;font-weight:600;padding:2px 7px;border-radius:4px;border:1px solid var(--line)}
+a.rt{display:inline-flex;align-items:baseline;gap:6px;text-decoration:none;color:inherit;border-radius:4px;padding:1px 4px;margin-left:-4px}
+a.rt:hover{background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+a.rt:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+a.rt i{font-style:normal;font-family:var(--f-mono);font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
+a.rt i.old{color:var(--g-a3)}
+a.rt.none{color:var(--muted)}
+a.rt.none .grade{font-weight:400;color:var(--muted)}
+.dim{color:var(--muted)}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.key{display:inline-flex;gap:12px;flex-wrap:wrap;font-size:.76rem;color:var(--muted)}
+.key i{font-style:normal;font-family:var(--f-mono)}
+.key .o{color:var(--g-a3)}
+
+.info{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px;font-size:.84rem}
+.info summary{cursor:pointer;font-weight:600}
+.info p{margin:8px 0 0;color:var(--muted);max-width:78ch}
+footer{font-size:.76rem;color:var(--muted);line-height:1.65}
+footer p{margin:0 0 6px}
+footer .contact{margin-top:10px}
+footer a{color:var(--accent);text-decoration:none}
+footer a:hover{text-decoration:underline}
+
+@media (max-width:760px){
+  .kpis{grid-template-columns:1fr}
+  .kpi + .kpi{border-left:0;border-top:1px solid var(--line)}
+  .count{margin-left:0;width:100%}
+  input[type=search]{width:100%}
+  label.f.search{flex:1 1 100%}
+  .hright{align-items:flex-start}
+  .updated{text-align:left}
+  td.amt .bar{width:48px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>시공사 시공능력평가 · 신용등급 현황 대시보드</h1>
+      <p class="sub">대한건설협회 시공능력평가(도급순위) 상위 100개사와 신용평가 3사 회사채(선순위) 등급 · 매주 월요일 아침 자동 갱신</p>
+    </div>
+    <div class="hright">
+      <a class="sister" href="https://daily-ratings.pages.dev/" target="_blank" rel="noopener">유동화시장 등급 · 금리 현황 →</a>
+      <div class="updated" id="updated">데이터 불러오는 중…</div>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-sum">
+    <div class="sec-head">
+      <h2 id="h-sum">요약 · 상위 100개사</h2>
+      <span class="note" id="sum-note">시공능력평가액 기준 · 등급은 3사 중 최고등급(회사채 → ICR → CP)</span>
+    </div>
+    <div class="kpis" id="kpis"><div class="placeholder">요약 불러오는 중…</div></div>
+    <div class="spreads" id="spreads"></div>
+  </section>
+
+  <section aria-labelledby="h-tbl">
+    <div class="sec-head">
+      <h2 id="h-tbl">시공능력평가 순위 · 회사채 등급</h2>
+      <div class="status" id="status"></div>
+    </div>
+    <div class="sec-head">
+      <span class="key"><span>등급 옆 날짜는 최근 평가일</span><span class="o"><i>'24.05.23</i> 평가 후 1년 경과</span><span><span class="kd" style="margin:0">ICR</span> <span class="kd" style="margin:0">CP</span> 회사채 등급이 없을 때 대신 표시</span><span><span class="ol pos">긍정적</span> <span class="ol neg">부정적</span> Outlook(안정적은 생략)</span><span>등급을 누르면 평가사 기업 페이지가 열립니다</span></span>
+    </div>
+    <div class="filters">
+      <div class="seg" role="group" aria-label="순위 구간" id="seg-band">
+        <button type="button" data-v="all" aria-pressed="true">전체</button>
+        <button type="button" data-v="1-10" aria-pressed="false">1–10</button>
+        <button type="button" data-v="11-30" aria-pressed="false">11–30</button>
+        <button type="button" data-v="31-50" aria-pressed="false">31–50</button>
+        <button type="button" data-v="51-100" aria-pressed="false">51–100</button>
+      </div>
+      <div class="seg" role="group" aria-label="순위 변동" id="seg-mv">
+        <button type="button" data-v="all" aria-pressed="true">전체</button>
+        <button type="button" data-v="up" aria-pressed="false">상승</button>
+        <button type="button" data-v="down" aria-pressed="false">하락</button>
+        <button type="button" data-v="flat" aria-pressed="false">유지</button>
+      </div>
+      <div class="seg" role="group" aria-label="등급 기준" id="seg-scope">
+        <button type="button" data-v="all" aria-pressed="true" title="회사채 등급이 없으면 ICR, 그다음 CP 등급을 표시">회사채+ICR·CP</button>
+        <button type="button" data-v="bond" aria-pressed="false">회사채만</button>
+      </div>
+      <label class="f" for="f-grade">최고등급
+        <select id="f-grade">
+          <option value="all">전체</option><option value="rated">등급 보유</option>
+          <option value="AA">AA급</option><option value="A">A급</option><option value="BBB">BBB급</option><option value="BB">BB급 이하</option><option value="CP">CP만</option>
+          <option value="none">미보유</option>
+        </select>
+      </label>
+      <label class="f" for="f-agency">평가사
+        <select id="f-agency"><option value="all">전체</option><option value="KIS">KIS</option><option value="KR">KR</option><option value="NICE">NICE</option></select>
+      </label>
+      <label class="f" for="f-fresh"><input type="checkbox" id="f-fresh"> 1년 내 평가만</label>
+      <label class="f search" for="f-q"><input type="search" id="f-q" placeholder="회사명 검색"></label>
+      <span class="count" id="count"></span>
+    </div>
+    <div class="table-box">
+      <table>
+        <thead><tr id="thead">
+          <th data-k="rank" aria-sort="ascending"><button type="button">순위</button></th>
+          <th data-k="mv"><button type="button">전년 대비</button></th>
+          <th class="num" data-k="prev"><button type="button">전년</button></th>
+          <th data-k="name"><button type="button">회사명</button></th>
+          <th class="num" data-k="amount"><button type="button">시공능력 평가액(억원)</button></th>
+          <th data-k="best"><button type="button">최고등급</button></th>
+          <th class="ag1" data-k="KIS" title="한국신용평가"><button type="button">KIS 한신평</button></th>
+          <th data-k="KR" title="한국기업평가"><button type="button">KR 한기평</button></th>
+          <th data-k="NICE" title="나이스신용평가"><button type="button">NICE</button></th>
+        </tr></thead>
+        <tbody id="tbody"><tr><td colspan="9" class="empty">불러오는 중…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <details class="info">
+    <summary>시공능력평가와 이 표를 읽는 법</summary>
+    <p>시공능력평가는 대한건설협회가 매년 7월 말 공시하는 건설사별 1건 공사 수행 능력의 금액 평가입니다. 공사실적평가액, 경영평가액, 기술능력평가액, 신인도평가액을 합산하며 발주처의 입찰참가 자격 제한과 업계 순위(도급순위)의 기준으로 쓰입니다.</p>
+    <p>순위와 평가액은 대한건설협회가 공시한 엑셀의 토목건축공사업(토건) 기준이며, 평가액에 마우스를 올리면 항목별 평가액이 보입니다. 전년 순위는 건설업 등록번호로 맞추므로 사명이 바뀐 회사도 이어집니다.</p>
+    <p>등급은 각 평가사 기업 페이지의 회사채(선순위) 현재 등급과 Outlook, 평가일입니다. 회사채 등급이 없는 회사는 기업신용등급(ICR)을, 그것도 없으면 기업어음(CP) 등급을 표시하고 ICR · CP 표시를 붙입니다. 회사채만 보려면 필터의 '회사채만'을 누르세요. 평가사가 등급을 내지 않았거나 유효기간이 끝난 경우 – 로 표시합니다. 최고등급은 3사 중 가장 높은 등급이며, 평가일이 1년을 넘은 등급은 날짜를 주황색으로 표시하니 평가사 원문에서 한 번 더 확인하시기 바랍니다.</p>
+    <p>시공능력평가는 매년 7월 말 공시가 올라오면, 등급은 매주 월요일 아침에 원 출처에서 다시 받아 갱신합니다.</p>
+  </details>
+
+  <footer>
+    <p>출처: 대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE). 이 화면은 공개된 자료를 모아 정리한 개인 참고용 자료이며, 정리 과정에서 지연·누락·오기가 생길 수 있고 원문과 다를 수 있습니다.</p>
+    <p>이 화면의 어떤 내용도 투자 권유나 여신·의사결정의 근거가 아니며, 이를 이용해 생긴 결과에 대해 작성자는 책임지지 않습니다. 정확한 내용은 각 기관의 원문 공시에서 확인하시기 바랍니다.</p>
+    <p>함께 보기: <a href="https://daily-ratings.pages.dev/" target="_blank" rel="noopener">유동화시장 등급 · 금리 현황 대시보드</a></p>
+    <p class="contact">문의: <span>name@koreainvestment.com</span></p>
+  </footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const getJSON = async p => { try { const r = await fetch(p, {cache:"no-store"}); return r.ok ? r.json() : null; } catch { return null; } };
+
+const AG=["KIS","KR","NICE"], AGN={KIS:"한국신용평가",KR:"한국기업평가",NICE:"나이스신용평가"};
+const KINDN={bond:"회사채(선순위)",icr:"기업신용등급(ICR)",cp:"기업어음(CP)"};
+const LT=["AAA","AA+","AA","AA-","A+","A","A-","BBB+","BBB","BBB-","BB+","BB","BB-","B+","B","B-","CCC","CC","C","D"];
+const ST=["A1","A2+","A2","A2-","A3+","A3","A3-","B+","B","B-","C","D"];
+const clean=g=>String(g||"").replace(/[↑↓]|\(.*?\)/g,"").trim();
+// 정렬용 순서: 장기등급(회사채·ICR) 전부가 단기등급(CP)보다 앞
+const gi=x=>{ if(!x) return 999; const g=clean(x.grade);
+  if(x.kind==="cp"){ const i=ST.indexOf(g); return 100+(i<0?99:i); }
+  const i=LT.indexOf(g); return i<0?99:i; };
+const bucket=x=>{ if(!x) return null; const i=gi(x);
+  return i>=100?"CP":i<=3?"AA":i<=6?"A":i<=9?"BBB":i<99?"BB":null; };
+const gcls=x=>{ const g=clean(x.grade);
+  if(x.kind==="cp") return /^A1/.test(g)?"g-a1":/^A2/.test(g)?"g-a2":/^A3/.test(g)?"g-a3":"g-b";
+  return ({AA:"g-a1",A:"g-a2",BBB:"g-a3",BB:"g-b"})[bucket(x)]||""; };
+const olTag=o=>{ if(!o||o==="안정적") return ""; const c=/부정|하향/.test(o)?"neg":/긍정|상향/.test(o)?"pos":"watch"; return `<span class="ol ${c}">${esc(o)}</span>`; };
+const kdTag=k=>k&&k!=="bond"?`<span class="kd" title="${KINDN[k]}">${k==="icr"?"ICR":"CP"}</span>`:"";
+const ymd=d=>d?"'"+d.slice(2).replace(/-/g,"."):"";
+const CUT=new Date(); CUT.setFullYear(CUT.getFullYear()-1);
+const CUTS=CUT.toISOString().slice(0,10);
+const isOld=d=>d&&d<CUTS;
+const fmtAmt=v=>Math.round(v).toLocaleString("ko-KR");
+const jo=v=>(v/10000).toLocaleString("ko-KR",{minimumFractionDigits:1,maximumFractionDigits:1});
+
+let ROWS=[], MAX=1, state={band:"all",mv:"all",scope:"all",grade:"all",agency:"all",fresh:false,q:"",sort:"rank",dir:1};
+
+// 현재 필터 기준으로 화면에 쓰는 등급(회사채만 보기·1년 내 평가만 반영)
+function eff(r,a){
+  const x=r.ratings[a]; if(!x||!x.grade) return null;
+  const kind=x.kind||"bond";
+  if(state.scope==="bond"&&kind!=="bond") return null;
+  if(state.fresh&&isOld(x.date)) return null;
+  return {...x,kind};
+}
+const effAll=r=>AG.map(a=>eff(r,a)).filter(Boolean);
+const bestOf=r=>effAll(r).sort((x,y)=>gi(x)-gi(y))[0]||null;
+
+// ---------------- 요약 ----------------
+function renderSummary(D){
+  const R=ROWS, tot=R.reduce((s,r)=>s+r.amount,0);
+  const band=(a,b)=>R.filter(r=>r.rank>=a&&r.rank<=b).reduce((s,r)=>s+r.amount,0);
+  const bands=[["1–10위",band(1,10),"--seg1"],["11–30위",band(11,30),"--seg2"],["31–50위",band(31,50),"--seg3"],["51–100위",band(51,100),"--seg4"]];
+  const pct=v=>(v/tot*100);
+  // 요약은 필터와 무관하게 전체 등급 기준
+  const all=r=>AG.map(a=>r.ratings[a]).filter(x=>x&&x.grade).map(x=>({...x,kind:x.kind||"bond"}));
+  const best=r=>all(r).sort((x,y)=>gi(x)-gi(y))[0];
+  const rated=R.filter(r=>all(r).length);
+  const nBond=R.filter(r=>all(r).some(x=>x.kind==="bond")).length;
+  const bk={AA:0,A:0,BBB:0,BB:0,CP:0}; rated.forEach(r=>bk[bucket(best(r))]++);
+  const bkDef=[["AA급","AA","--g-a1"],["A급","A","--g-a2"],["BBB급","BBB","--g-a3"],["BB급↓","BB","--g-b"],["CP만","CP","--flat"]];
+  const up=R.filter(r=>r.mv>0), dn=R.filter(r=>r.mv<0), fl=R.filter(r=>r.mv===0);
+  const topUp=[...up].sort((a,b)=>b.mv-a.mv||a.rank-b.rank).slice(0,2);
+  const topDn=[...dn].sort((a,b)=>a.mv-b.mv||a.rank-b.rank).slice(0,2);
+  const mvRow=(lb,r,cls)=>`<span class="lb">${lb}</span><b title="${esc(r.name)}">${esc(r.name)}</b><span class="mv"><span class="dim">${r.prev}→${r.rank}위</span> <span class="chg ${cls}">${cls==="up"?"▲":"▼"}${Math.abs(r.mv)}</span></span>`;
+  $("#kpis").innerHTML=`
+    <div class="kpi">
+      <div class="name"><b>시공능력평가액 합계</b><span>상위 100개사</span></div>
+      <div class="val"><span class="num">${jo(tot)}<small>조원</small></span>
+        <span class="chg flat">상위 10개사 ${pct(bands[0][1]).toFixed(1)}%</span></div>
+      <div class="stack" role="img" aria-label="순위 구간별 평가액 비중">${bands.map(b=>`<span style="width:${pct(b[1])}%;background:var(${b[2]})" title="${b[0]} ${jo(b[1])}조원 · ${pct(b[1]).toFixed(1)}%"></span>`).join("")}</div>
+      <div class="legend">${bands.map(b=>`<span><i style="background:var(${b[2]})"></i>${b[0]} ${pct(b[1]).toFixed(0)}%</span>`).join("")}</div>
+    </div>
+    <div class="kpi">
+      <div class="name"><b>신용등급 보유</b><span>3사 중 1곳 이상 · 최고등급 분포</span></div>
+      <div class="val"><span class="num">${rated.length}<small>/ 100개사</small></span>
+        <span class="chg flat">회사채 등급 ${nBond}개사</span></div>
+      <div class="stack" role="img" aria-label="최고등급 분포">${bkDef.filter(b=>bk[b[1]]).map(b=>`<span style="width:${bk[b[1]]/rated.length*100}%;background:var(${b[2]})" title="${b[0]} ${bk[b[1]]}개사"></span>`).join("")}</div>
+      <div class="legend">${bkDef.map(b=>`<span><i style="background:var(${b[2]})"></i>${b[0]} ${bk[b[1]]}</span>`).join("")}</div>
+    </div>
+    <div class="kpi">
+      <div class="name"><b>전년 대비 순위 변동</b><span>${D.year-1}년 → ${D.year}년</span></div>
+      <div class="mvsum"><span class="chg up">▲ 상승 <b>${up.length}</b>개사</span><span class="chg down">▼ 하락 <b>${dn.length}</b>개사</span><span class="chg flat">– 유지 <b>${fl.length}</b>개사</span></div>
+      <div class="movers">${topUp.map((r,i)=>mvRow(`상승 ${i+1}위`,r,"up")).join("")}${topDn.map((r,i)=>mvRow(`하락 ${i+1}위`,r,"down")).join("")}</div>
+    </div>`;
+  const first=R.find(r=>r.rank===1), last=R.reduce((a,b)=>a.rank>b.rank?a:b);
+  const neg=R.filter(r=>all(r).some(x=>/부정|하향/.test(x.outlook||""))).length;
+  const pos=R.filter(r=>all(r).some(x=>/긍정|상향/.test(x.outlook||""))).length;
+  $("#spreads").innerHTML=`<span>1위 평가액 <b>${jo(first.amount)}조원</b></span>
+    <span>100위 컷 <b>${fmtAmt(last.amount)}억원</b></span>
+    <span>1위 / 100위 <b>${(first.amount/last.amount).toFixed(0)}배</b></span>
+    <span>Outlook 긍정적 <b>${pos}개사</b> · 부정적 <b>${neg}개사</b></span>
+    <span>등급 최근 평가일 <b>${ymd(D.rating_latest)}</b></span>`;
+}
+
+// ---------------- 수집 상태 ----------------
+function renderStatus(S){
+  if(!S||!S.sources){ $("#status").innerHTML=""; return; }
+  $("#status").innerHTML=Object.entries(S.sources).map(([k,v])=>
+    `<span class="src ${v.ok?"":"bad"}" title="${esc(v.ok?"정상":v.error||"오류")}"><span class="dot"></span>${esc(k)}${v.ok?"":" 지연"}</span>`).join("")
+    +(S.unmapped&&S.unmapped.length?`<span class="src bad" title="${esc(S.unmapped.join(", "))}"><span class="dot"></span>평가사 코드 미등록 ${S.unmapped.length}개사</span>`:"");
+}
+
+// ---------------- 표 ----------------
+function ratingCell(r,a,first){
+  const raw=r.ratings[a]||{}, x=eff(r,a), cls=first?' class="ag1"':"";
+  if(!x){
+    const why=raw.grade?"현재 필터에서 제외":"공시 등급 없음";
+    return raw.url
+      ? `<td${cls}><a class="rt none" href="${esc(raw.url)}" target="_blank" rel="noopener" title="${AGN[a]} ${why} · 기업 페이지 열기"><span class="grade">–</span></a></td>`
+      : `<td${cls}><span class="dim">–</span></td>`;
+  }
+  const old=isOld(x.date);
+  const tip=`${AGN[a]} ${KINDN[x.kind]} ${x.grade}${x.outlook?` · ${x.outlook}`:""}${x.date?` · 평가일 ${x.date}`:""}${x.cp?` · CP ${x.cp}`:""}${old?" · 평가 후 1년 경과":""}`;
+  const inner=`<span class="grade ${gcls(x)}">${esc(x.grade)}</span>${kdTag(x.kind)}${olTag(x.outlook)}${x.date?`<i${old?' class="old"':""}>${ymd(x.date)}</i>`:""}`;
+  return raw.url
+    ? `<td${cls}><a class="rt" href="${esc(raw.url)}" target="_blank" rel="noopener" title="${esc(tip)} · 평가사 페이지 열기">${inner}</a></td>`
+    : `<td${cls}><span class="rt" title="${esc(tip)}">${inner}</span></td>`;
+}
+function amtTip(r){
+  const L=[`시공능력평가액 ${fmtAmt(r.amount)}억원`];
+  if(r.parts) L.push(...Object.entries(r.parts).filter(([,v])=>v!=null).map(([k,v])=>`· ${k}평가액 ${fmtAmt(v)}억원`));
+  if(r.civil!=null) L.push(`토목분야 ${fmtAmt(r.civil)} / 건축분야 ${fmtAmt(r.arch)}억원`);
+  return L.join("\n");
+}
+function rowHTML(r){
+  const mvc=r.mv==null?"flat":r.mv>0?"up":r.mv<0?"down":"flat";
+  const mvt=r.mv==null?"신규":r.mv>0?`▲${r.mv}`:r.mv<0?`▼${-r.mv}`:"–";
+  const b=bestOf(r);
+  return `<tr>
+    <td class="rank">${r.rank}</td>
+    <td class="mv ${mvc}">${mvt}</td>
+    <td class="prev">${r.prev??"-"}</td>
+    <td class="co">${esc(r.name)}${r.region?`<small>${esc(r.region)}</small>`:""}</td>
+    <td class="num amt"><span title="${esc(amtTip(r))}">${fmtAmt(r.amount)}</span><span class="bar" aria-hidden="true"><i style="width:${(r.amount/MAX*100).toFixed(2)}%"></i></span></td>
+    <td>${b?`<span class="best grade ${gcls(b)}">${esc(clean(b.grade))}</span>${kdTag(b.kind)}`:'<span class="dim">–</span>'}</td>
+    ${AG.map((a,i)=>ratingCell(r,a,i===0)).join("")}</tr>`;
+}
+function val(r,k){
+  if(k==="best"){ const b=bestOf(r); return b?gi(b):null; }
+  if(AG.includes(k)){ const x=eff(r,k); return x?gi(x):null; }
+  return r[k];
+}
+function cmp(a,b){
+  const va=val(a,state.sort), vb=val(b,state.sort);
+  if(va==null&&vb==null) return a.rank-b.rank; if(va==null) return 1; if(vb==null) return -1;
+  const c=typeof va==="string"?va.localeCompare(vb,"ko"):va-vb;
+  return (c*state.dir)||a.rank-b.rank;
+}
+function render(){
+  const q=state.q.trim().toLowerCase();
+  const [lo,hi]=state.band==="all"?[1,1e9]:state.band.split("-").map(Number);
+  const rows=ROWS.filter(r=>{
+    if(r.rank<lo||r.rank>hi) return false;
+    if(state.mv==="up"&&!(r.mv>0)) return false;
+    if(state.mv==="down"&&!(r.mv<0)) return false;
+    if(state.mv==="flat"&&r.mv!==0) return false;
+    const list=AG.filter(a=>eff(r,a)), b=bestOf(r);
+    if(state.agency!=="all"&&!list.includes(state.agency)) return false;
+    if(state.grade==="rated"&&!list.length) return false;
+    if(state.grade==="none"&&list.length) return false;
+    if(["AA","A","BBB","BB","CP"].includes(state.grade)&&bucket(b)!==state.grade) return false;
+    if(q&&!r.name.toLowerCase().includes(q)) return false;
+    return true;
+  }).sort(cmp);
+  $("#count").textContent=`${rows.length}개사 / 전체 ${ROWS.length}개사`;
+  $("#tbody").innerHTML=rows.length?rows.map(rowHTML).join(""):'<tr><td colspan="9" class="empty">조건에 맞는 건설사가 없습니다. 필터를 바꿔 보세요.</td></tr>';
+  document.querySelectorAll("#thead th[data-k]").forEach(th=>th.setAttribute("aria-sort",th.dataset.k===state.sort?(state.dir>0?"ascending":"descending"):"none"));
+}
+function bindSeg(id,key){
+  document.querySelectorAll(`#${id} button`).forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(`#${id} button`).forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+    state[key]=b.dataset.v; render();
+  }));
+}
+bindSeg("seg-band","band"); bindSeg("seg-mv","mv"); bindSeg("seg-scope","scope");
+$("#f-grade").addEventListener("change",e=>{state.grade=e.target.value;render()});
+$("#f-agency").addEventListener("change",e=>{state.agency=e.target.value;render()});
+$("#f-fresh").addEventListener("change",e=>{state.fresh=e.target.checked;render()});
+$("#f-q").addEventListener("input",e=>{state.q=e.target.value;render()});
+document.querySelectorAll("#thead th[data-k] button").forEach(b=>b.addEventListener("click",()=>{
+  const k=b.parentElement.dataset.k;
+  if(state.sort===k) state.dir*=-1; else {state.sort=k; state.dir=["amount","mv"].includes(k)?-1:1;}
+  render();
+}));
+
+(async()=>{
+  const [D,S]=await Promise.all([getJSON("data/contractors.json"),getJSON("data/status.json")]);
+  renderStatus(S);
+  if(!D||!D.rows){
+    $("#kpis").innerHTML='<div class="placeholder">데이터를 불러오지 못했습니다. 새로고침해 보세요.</div>';
+    $("#tbody").innerHTML='<tr><td colspan="9" class="empty">데이터를 불러오지 못했습니다.</td></tr>';
+    $("#updated").textContent="데이터 없음"; return;
+  }
+  ROWS=D.rows.map(r=>({...r,mv:r.prev!=null?r.prev-r.rank:null}));
+  MAX=Math.max(...ROWS.map(r=>r.amount));
+  $("#updated").textContent=S?.generated?`${D.year}년 시공능력평가 · 최종 수집 ${S.generated} KST`:`${D.year}년 시공능력평가`;
+  renderSummary(D); render();
+})();
+</script>
+</body>
+</html>
