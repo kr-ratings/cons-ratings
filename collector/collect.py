@@ -53,13 +53,13 @@ def norm(name):
 
 
 def display(name):
-    """'삼성물산 주식회사' → '삼성물산(주)', '주식회사 플랜텍' → '(주)플랜텍'"""
+    """'삼성물산 주식회사' → '삼성물산㈜', '주식회사 플랜텍' → '㈜플랜텍', '(주)대우건설' → '㈜대우건설'"""
     n = re.sub(r"\s+", " ", str(name).strip())
     if n.startswith("주식회사"):
-        return "(주)" + n[4:].strip()
-    if n.endswith("주식회사"):
-        return n[:-4].strip() + "(주)"
-    return n
+        n = "㈜" + n[4:].strip()
+    elif n.endswith("주식회사"):
+        n = n[:-4].strip() + "㈜"
+    return re.sub(r"\s*\(주\)\s*", "㈜", n)
 
 
 def ymd(s):
