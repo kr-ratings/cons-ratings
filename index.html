@@ -99,6 +99,11 @@ select,input[type=search]{font:inherit;font-size:.85rem;color:var(--fg);backgrou
 input[type=search]{min-width:0;width:210px}
 input[type=checkbox]{accent-color:var(--accent)}
 .count{margin-left:auto;font-size:.82rem;color:var(--muted)}
+.dl{font:inherit;font-size:.82rem;font-weight:600;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.dl:hover{background:var(--accent-soft)}
+.dl:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.dl:disabled{opacity:.6;cursor:progress}
+.dl svg{width:14px;height:14px}
 
 .table-box{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:auto;max-height:78vh}
 table{width:100%;border-collapse:separate;border-spacing:0;font-size:.84rem}
@@ -238,6 +243,7 @@ footer a:hover{text-decoration:underline}
       <label class="f" for="f-fresh"><input type="checkbox" id="f-fresh"> 1년 내 평가만</label>
       <label class="f search" for="f-q"><input type="search" id="f-q" placeholder="회사명 검색"></label>
       <span class="count" id="count"></span>
+      <button type="button" class="dl" id="dl" title="지금 표에 보이는 필터·정렬 그대로 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀 다운로드</button>
     </div>
     <div class="table-box">
       <table>
@@ -429,6 +435,7 @@ function render(){
     if(q&&!r.name.toLowerCase().includes(q)) return false;
     return true;
   }).sort(cmp);
+  VIEW=rows;
   $("#count").textContent=`${rows.length}개사 / 전체 ${ROWS.length}개사`;
   $("#tbody").innerHTML=rows.length?rows.map(rowHTML).join(""):'<tr><td colspan="8" class="empty">조건에 맞는 건설사가 없습니다. 필터를 바꿔 보세요.</td></tr>';
   document.querySelectorAll("#thead th[data-k]").forEach(th=>th.setAttribute("aria-sort",th.dataset.k===state.sort?(state.dir>0?"ascending":"descending"):"none"));
@@ -440,6 +447,69 @@ function bindSeg(id,key){
   }));
 }
 (()=>{const tb=document.querySelector(".table-box"); tb.addEventListener("scroll",()=>tb.classList.toggle("scrolled",tb.scrollLeft>0),{passive:true});})();
+// ---------------- 엑셀 다운로드 ----------------
+let VIEW=[], META=null, STAT=null;
+function loadXLSX(){
+  if(window.XLSX) return Promise.resolve();
+  return new Promise((ok,fail)=>{ const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"; s.onload=ok; s.onerror=fail; document.head.appendChild(s); });
+}
+function filterText(){
+  const f=[];
+  const seg=id=>document.querySelector(`#${id} button[aria-pressed="true"]`)?.innerText;
+  if(state.band!=="all") f.push(`순위 ${seg("seg-band")}`);
+  if(state.mv!=="all") f.push(`순위 변동 ${seg("seg-mv")}`);
+  f.push(`등급 기준 ${seg("seg-scope")}`);
+  if(state.grade!=="all") f.push(`최고등급 ${$("#f-grade").selectedOptions[0].text}`);
+  if(state.agency!=="all") f.push(`평가사 ${state.agency}`);
+  if(state.fresh) f.push("1년 내 평가만");
+  if(state.q.trim()) f.push(`검색어 "${state.q.trim()}"`);
+  return f.join(" · ");
+}
+async function downloadXLSX(){
+  const btn=$("#dl"), label=btn.lastChild.textContent;
+  btn.disabled=true; btn.lastChild.textContent="만드는 중…";
+  try{
+    await loadXLSX();
+    const KIND={bond:"회사채",icr:"ICR",cp:"CP"};
+    const head=["순위","전년 순위","전년 대비","회사명","소재지","시공능력평가액(억원)","공사실적평가액(억원)","경영평가액(억원)","기술능력평가액(억원)","신인도평가액(억원)","최고등급","최고등급 종류"];
+    for(const a of AG) head.push(`${a} 등급`,`${a} 종류`,`${a} Outlook`,`${a} 평가일`);
+    const num=v=>v==null?null:Math.round(v*10)/10;
+    const body=VIEW.map(r=>{
+      const b=bestOf(r), p=r.parts||{};
+      const row=[r.rank, r.prev??null, r.mv??null, r.name, r.region||"", num(r.amount), num(p["실적"]), num(p["경영"]), num(p["기술"]), num(p["신인도"]), b?clean(b.grade):"", b?KIND[b.kind]:""];
+      for(const a of AG){ const x=eff(r,a); row.push(x?x.grade:"", x?KIND[x.kind]:"", x?(x.outlook||""):"", x?(x.date||""):""); }
+      return row;
+    });
+    const ws=XLSX.utils.aoa_to_sheet([head,...body]);
+    ws["!cols"]=head.map((h,i)=>({wch:i===3?24:i<3?8:/평가액/.test(h)?14:/평가일/.test(h)?11:/Outlook/.test(h)?9:/종류/.test(h)?7:9}));
+    ws["!autofilter"]={ref:XLSX.utils.encode_range({s:{r:0,c:0},e:{r:body.length,c:head.length-1}})};
+    for(let i=1;i<=body.length;i++) for(let c=5;c<=9;c++){ const cell=ws[XLSX.utils.encode_cell({r:i,c})]; if(cell&&typeof cell.v==="number") cell.z="#,##0"; }
+    const info=[
+      ["시공사 시공능력평가 · 신용등급 현황"],[],
+      ["시공능력평가 기준", `${META?.year??""}년 대한건설협회 시공능력평가(토목건축공사업)`],
+      ["최종 수집", STAT?.generated?`${STAT.generated} KST`:""],
+      ["내려받은 시각", new Date().toLocaleString("ko-KR",{timeZone:"Asia/Seoul"})],
+      ["적용된 화면 조건", filterText()],
+      ["행 수", `${VIEW.length}개사 / 전체 ${ROWS.length}개사`],[],
+      ["전년 대비","양수는 순위 상승, 음수는 하락"],
+      ["등급 종류","회사채: 회사채(선순위) · ICR: 기업신용등급 · CP: 기업어음(회사채 등급이 없을 때 대신 표시)"],
+      ["출처","대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE)"],
+      ["사이트", location.origin+location.pathname],
+      ["유의사항","공개 자료를 모아 정리한 참고용 자료이며 원문과 다를 수 있습니다. 투자 권유나 의사결정의 근거가 아닙니다."]
+    ];
+    const ws2=XLSX.utils.aoa_to_sheet(info); ws2["!cols"]=[{wch:18},{wch:90}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"시평·등급");
+    XLSX.utils.book_append_sheet(wb,ws2,"정보");
+    const d=new Date(Date.now()+9*3600e3).toISOString().slice(0,10).replace(/-/g,"");
+    XLSX.writeFile(wb,`cons-ratings_${d}.xlsx`);
+  }catch(e){
+    console.error(e); btn.lastChild.textContent="다운로드 실패 · 다시 시도"; setTimeout(()=>{btn.lastChild.textContent=label;},2500); btn.disabled=false; return;
+  }
+  btn.disabled=false; btn.lastChild.textContent=label;
+}
+$("#dl").addEventListener("click",downloadXLSX);
 bindSeg("seg-band","band"); bindSeg("seg-mv","mv"); bindSeg("seg-scope","scope");
 $("#f-grade").addEventListener("change",e=>{state.grade=e.target.value;render()});
 $("#f-agency").addEventListener("change",e=>{state.agency=e.target.value;render()});
@@ -460,7 +530,7 @@ document.querySelectorAll("#thead th[data-k] button").forEach(b=>b.addEventListe
     $("#updated").textContent="데이터 없음"; return;
   }
   ROWS=D.rows.map(r=>({...r,mv:r.prev!=null?r.prev-r.rank:null}));
-  MAX=Math.max(...ROWS.map(r=>r.amount));
+  MAX=Math.max(...ROWS.map(r=>r.amount)); META=D; STAT=S;
   $("#updated").textContent=S?.generated?`${D.year}년 시공능력평가 · 최종 수집 ${S.generated} KST`:`${D.year}년 시공능력평가`;
   renderSummary(D); render();
 })();
