@@ -497,6 +497,7 @@ async function downloadXLSX(){
       ["등급 종류","회사채: 회사채(선순위) · ICR: 기업신용등급 · CP: 기업어음(회사채 등급이 없을 때 대신 표시)"],
       ["출처","대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE)"],
       ["사이트", location.origin+location.pathname],
+      ["제작","한국투자증권 PF그룹 최이름"],
       ["유의사항","공개 자료를 모아 정리한 참고용 자료이며 원문과 다를 수 있습니다. 투자 권유나 의사결정의 근거가 아닙니다."]
     ];
     const ws2=XLSX.utils.aoa_to_sheet(info); ws2["!cols"]=[{wch:18},{wch:90}];
