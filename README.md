@@ -13,7 +13,7 @@
 | `data/status.json` | 마지막 수집 시각과 출처별 성공 여부 |
 | `collector/collect.py` | 원 출처 수집기 |
 | `collector/agency_ids.json` | 회사별 평가사 기업코드 매핑 (등록번호 기준) |
-| `.github/workflows/update.yml` | 매주 월요일 07:10 KST 자동 실행 |
+| `.github/workflows/update.yml` | 매일 오전(08:00) 자동 실행 (07:50 KST 시작) |
 
 ## 갱신 방식
 
@@ -42,4 +42,4 @@ pip install requests beautifulsoup4 openpyxl
 python collector/collect.py
 ```
 
-GitHub에서는 Actions 탭 → `주간 데이터 갱신` → `Run workflow`로 바로 돌릴 수 있습니다.
+GitHub에서는 Actions 탭 → `수집 및 배포` → `Run workflow`로 바로 돌릴 수 있습니다.
