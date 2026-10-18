@@ -55,10 +55,10 @@
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-sans);font-size:14px;line-height:1.5}
 .wrap{max-width:1680px;margin:0 auto;padding-inline:16px;padding-block:24px 40px;display:flex;flex-direction:column;gap:20px}
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 16px}
-h1{font-size:1.45rem;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance}
+h1{font-size:1.45rem;font-weight:700;margin:0;letter-spacing:-.01em;text-wrap:balance;word-break:keep-all}
 .sub{color:var(--muted);font-size:.85rem;margin:2px 0 0}
 .hright{display:flex;flex-direction:column;align-items:flex-end;gap:6px}
-.updated{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);text-align:right}
+.updated{font-size:.78rem;color:var(--muted);text-align:right;font-variant-numeric:tabular-nums;word-break:keep-all}
 .sister{font-size:.76rem;font-weight:600;color:var(--accent);text-decoration:none;border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:3px 9px}
 .sister:hover{background:var(--accent-soft)}
 .sister .sl{color:var(--muted);font-weight:500}
@@ -77,12 +77,14 @@ h2{font-size:.78rem;font-weight:600;letter-spacing:.08em;color:var(--muted);marg
 .kpi .name span{font-size:.72rem;color:var(--muted)}
 .kpi .val{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .kpi .num{font-family:var(--f-mono);font-size:1.9rem;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.kpi .num small{font-size:.9rem;color:var(--muted);margin-left:2px}
+.kpi .num small{font-family:var(--f-sans);font-size:.9rem;color:var(--muted);margin-left:2px;letter-spacing:0}
 .chg{font-family:var(--f-mono);font-size:.85rem;font-variant-numeric:tabular-nums}
+.chg .lb{font-family:var(--f-sans);font-size:.8rem;margin-right:3px}
+.chg .lb.r{margin:0 0 0 1px}
 .chg.up{color:var(--up)} .chg.down{color:var(--down)} .chg.flat{color:var(--flat)}
 .stack{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--line);gap:1px}
 .stack span{display:block;height:100%;min-width:2px}
-.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.72rem;color:var(--muted);font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.legend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
 .legend span{display:inline-flex;align-items:center;gap:5px}
 .legend i{width:8px;height:8px;border-radius:2px;display:inline-block}
 .mvsum{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding-block:6px 4px}
@@ -362,14 +364,14 @@ function renderSummary(D){
     <div class="kpi">
       <div class="name"><b>시공능력평가액 합계</b><span>상위 100개사</span></div>
       <div class="val"><span class="num">${jo(tot)}<small>조원</small></span>
-        <span class="chg flat">상위 10개사 ${pct(bands[0][1]).toFixed(1)}%</span></div>
+        <span class="chg flat"><span class="lb">상위 10개사</span>${pct(bands[0][1]).toFixed(1)}%</span></div>
       <div class="stack" role="img" aria-label="순위 구간별 평가액 비중">${bands.map(b=>`<span style="width:${pct(b[1])}%;background:var(${b[2]})" title="${b[0]} ${jo(b[1])}조원 · ${pct(b[1]).toFixed(1)}%"></span>`).join("")}</div>
       <div class="legend">${bands.map(b=>`<span><i style="background:var(${b[2]})"></i>${b[0]} ${pct(b[1]).toFixed(0)}%</span>`).join("")}</div>
     </div>
     <div class="kpi">
       <div class="name"><b>신용등급 보유</b><span>3사 중 1곳 이상 · 최고등급 분포</span></div>
       <div class="val"><span class="num">${rated.length}<small>/ 100개사</small></span>
-        <span class="chg flat">회사채 등급 ${nBond}개사</span></div>
+        <span class="chg flat"><span class="lb">회사채 등급</span>${nBond}<span class="lb r">개사</span></span></div>
       <div class="stack" role="img" aria-label="최고등급 분포">${bkDef.filter(b=>bk[b[1]]).map(b=>`<span style="width:${bk[b[1]]/rated.length*100}%;background:var(${b[2]})" title="${b[0]} ${bk[b[1]]}개사"></span>`).join("")}</div>
       <div class="legend">${bkDef.map(b=>`<span><i style="background:var(${b[2]})"></i>${b[0]} ${bk[b[1]]}</span>`).join("")}</div>
     </div>
