@@ -26,5 +26,677 @@
   "dart_name": "SGC E&C",
   "stock": "016250",
   "manual": true
+ },
+ "668": {
+  "name": "삼성물산㈜",
+  "corp_code": "00149655",
+  "dart_name": "삼성물산",
+  "stock": "028260",
+  "cands": 2
+ },
+ "24": {
+  "name": "현대건설㈜",
+  "corp_code": "00164478",
+  "dart_name": "현대건설",
+  "stock": "000720",
+  "cands": 1
+ },
+ "343": {
+  "name": "지에스건설㈜",
+  "corp_code": "00120030",
+  "dart_name": "GS건설",
+  "stock": "006360",
+  "cands": 2
+ },
+ "010250": {
+  "name": "현대엔지니어링㈜",
+  "corp_code": "01465666",
+  "dart_name": "현대엔지니어링",
+  "stock": null,
+  "cands": 3
+ },
+ "541": {
+  "name": "㈜대우건설",
+  "corp_code": "00124540",
+  "dart_name": "대우건설",
+  "stock": "047040",
+  "cands": 1
+ },
+ "50": {
+  "name": "디엘이앤씨㈜",
+  "corp_code": "01524093",
+  "dart_name": "DL이앤씨",
+  "stock": "375500",
+  "cands": 1
+ },
+ "13": {
+  "name": "롯데건설㈜",
+  "corp_code": "00120438",
+  "dart_name": "롯데건설",
+  "stock": null,
+  "cands": 1
+ },
+ "907": {
+  "name": "㈜포스코이앤씨",
+  "corp_code": "00100814",
+  "dart_name": "포스코이앤씨",
+  "stock": null,
+  "cands": 1
+ },
+ "308": {
+  "name": "에스케이에코플랜트㈜",
+  "corp_code": "00131799",
+  "dart_name": "에스케이에코플랜트",
+  "stock": null,
+  "cands": 1
+ },
+ "897": {
+  "name": "㈜한화",
+  "corp_code": "00160588",
+  "dart_name": "한화",
+  "stock": "000880",
+  "cands": 1
+ },
+ "1116": {
+  "name": "㈜호반건설",
+  "corp_code": "00236614",
+  "dart_name": "호반건설",
+  "stock": null,
+  "cands": 1
+ },
+ "124": {
+  "name": "디엘건설㈜",
+  "corp_code": "00128971",
+  "dart_name": "디엘건설",
+  "stock": "001880",
+  "cands": 1
+ },
+ "410": {
+  "name": "계룡건설산업㈜",
+  "corp_code": "00102432",
+  "dart_name": "계룡건설산업",
+  "stock": "013580",
+  "cands": 1
+ },
+ "909": {
+  "name": "두산에너빌리티㈜",
+  "corp_code": "00159616",
+  "dart_name": "두산에너빌리티",
+  "stock": "034020",
+  "cands": 1
+ },
+ "2478": {
+  "name": "㈜서희건설",
+  "corp_code": "00219848",
+  "dart_name": "서희건설",
+  "stock": "035890",
+  "cands": 1
+ },
+ "1217": {
+  "name": "제일건설㈜",
+  "corp_code": "00621335",
+  "dart_name": "제일건설",
+  "stock": null,
+  "cands": 4
+ },
+ "1807": {
+  "name": "우미건설㈜",
+  "corp_code": "00209115",
+  "dart_name": "우미건설",
+  "stock": null,
+  "cands": 1
+ },
+ "641": {
+  "name": "쌍용건설㈜",
+  "corp_code": "00138206",
+  "dart_name": "쌍용건설",
+  "stock": "012650",
+  "cands": 1
+ },
+ "771": {
+  "name": "효성중공업㈜",
+  "corp_code": "01316245",
+  "dart_name": "효성중공업",
+  "stock": "298040",
+  "cands": 1
+ },
+ "332": {
+  "name": "㈜케이씨씨건설",
+  "corp_code": "00105466",
+  "dart_name": "KCC건설",
+  "stock": "021320",
+  "cands": 1
+ },
+ "105006": {
+  "name": "대방건설㈜",
+  "corp_code": "00319166",
+  "dart_name": "대방건설",
+  "stock": null,
+  "cands": 1
+ },
+ "26": {
+  "name": "코오롱글로벌㈜",
+  "corp_code": "00152880",
+  "dart_name": "코오롱글로벌",
+  "stock": "003070",
+  "cands": 1
+ },
+ "874": {
+  "name": "㈜태영건설",
+  "corp_code": "00153861",
+  "dart_name": "태영건설",
+  "stock": "009410",
+  "cands": 4
+ },
+ "582": {
+  "name": "동부건설㈜",
+  "corp_code": "00115612",
+  "dart_name": "동부건설",
+  "stock": "005960",
+  "cands": 2
+ },
+ "446": {
+  "name": "두산건설㈜",
+  "corp_code": "00102760",
+  "dart_name": "두산건설",
+  "stock": "011160",
+  "cands": 3
+ },
+ "440": {
+  "name": "금호건설㈜",
+  "corp_code": "00106313",
+  "dart_name": "금호건설",
+  "stock": "002990",
+  "cands": 2
+ },
+ "439": {
+  "name": "한신공영㈜",
+  "corp_code": "00162063",
+  "dart_name": "한신공영",
+  "stock": "004960",
+  "cands": 1
+ },
+ "342": {
+  "name": "㈜호반산업",
+  "corp_code": "00874919",
+  "dart_name": "호반산업",
+  "stock": null,
+  "cands": 2
+ },
+ "555": {
+  "name": "㈜에이치제이중공업",
+  "corp_code": "00633835",
+  "dart_name": "HJ중공업",
+  "stock": "097230",
+  "cands": 1
+ },
+ "574": {
+  "name": "㈜비에스한양",
+  "corp_code": "00162221",
+  "dart_name": "비에스한양",
+  "stock": null,
+  "cands": 1
+ },
+ "1414": {
+  "name": "㈜금강주택",
+  "corp_code": "00168395",
+  "dart_name": "금강주택",
+  "stock": null,
+  "cands": 2
+ },
+ "2229": {
+  "name": "신세계건설㈜",
+  "corp_code": "00217947",
+  "dart_name": "신세계건설",
+  "stock": "034300",
+  "cands": 1
+ },
+ "1019": {
+  "name": "삼성이앤에이㈜",
+  "corp_code": "00126308",
+  "dart_name": "삼성E&A",
+  "stock": "028050",
+  "cands": 1
+ },
+ "010386": {
+  "name": "자이씨앤에이㈜",
+  "corp_code": "01597859",
+  "dart_name": "자이씨앤에이",
+  "stock": null,
+  "cands": 1
+ },
+ "965": {
+  "name": "㈜동원개발",
+  "corp_code": "00117966",
+  "dart_name": "동원개발",
+  "stock": "013120",
+  "cands": 3
+ },
+ "1045": {
+  "name": "㈜반도건설",
+  "corp_code": "00656492",
+  "dart_name": "반도건설",
+  "stock": null,
+  "cands": 1
+ },
+ "2196": {
+  "name": "㈜대광건영",
+  "corp_code": "00524546",
+  "dart_name": "대광건영",
+  "stock": null,
+  "cands": 1
+ },
+ "150183": {
+  "name": "중흥토건㈜",
+  "corp_code": "00916862",
+  "dart_name": "중흥토건",
+  "stock": null,
+  "cands": 1
+ },
+ "150006": {
+  "name": "㈜라인건설",
+  "corp_code": "00414115",
+  "dart_name": "라인건설",
+  "stock": null,
+  "cands": 4
+ },
+ "339": {
+  "name": "진흥기업㈜",
+  "corp_code": "00150828",
+  "dart_name": "진흥기업",
+  "stock": "002780",
+  "cands": 2
+ },
+ "010487": {
+  "name": "㈜성도이엔지",
+  "corp_code": "00216498",
+  "dart_name": "성도이엔지",
+  "stock": "037350",
+  "cands": 2
+ },
+ "610": {
+  "name": "㈜동양건설산업",
+  "corp_code": "00117072",
+  "dart_name": "동양건설산업",
+  "stock": "005900",
+  "cands": 2
+ },
+ "1229": {
+  "name": "대보건설㈜",
+  "corp_code": "00255521",
+  "dart_name": "대보건설",
+  "stock": null,
+  "cands": 1
+ },
+ "172": {
+  "name": "에이치에스화성㈜",
+  "corp_code": "00174527",
+  "dart_name": "HS화성",
+  "stock": "002460",
+  "cands": 1
+ },
+ "626": {
+  "name": "㈜서 한",
+  "corp_code": "00131504",
+  "dart_name": "서한",
+  "stock": "011370",
+  "cands": 3
+ },
+ "020345": {
+  "name": "엘티삼보㈜",
+  "corp_code": "00125910",
+  "dart_name": "엘티삼보",
+  "stock": null,
+  "cands": 1
+ },
+ "050131": {
+  "name": "㈜라인산업",
+  "corp_code": "01025583",
+  "dart_name": "라인산업",
+  "stock": null,
+  "cands": 2
+ },
+ "225": {
+  "name": "극동건설㈜",
+  "corp_code": "00105086",
+  "dart_name": "극동건설",
+  "stock": null,
+  "cands": 2
+ },
+ "2": {
+  "name": "경남기업㈜",
+  "corp_code": "00101257",
+  "dart_name": "경남기업",
+  "stock": "000800",
+  "cands": 2
+ },
+ "128": {
+  "name": "남광토건㈜",
+  "corp_code": "00107066",
+  "dart_name": "남광토건",
+  "stock": "001260",
+  "cands": 1
+ },
+ "1739": {
+  "name": "동문건설㈜",
+  "corp_code": "00115269",
+  "dart_name": "동문건설",
+  "stock": null,
+  "cands": 1
+ },
+ "180": {
+  "name": "일성건설㈜",
+  "corp_code": "00146232",
+  "dart_name": "일성건설",
+  "stock": "013360",
+  "cands": 2
+ },
+ "2295": {
+  "name": "㈜케이알산업",
+  "corp_code": "00168234",
+  "dart_name": "케이알산업",
+  "stock": null,
+  "cands": 1
+ },
+ "1179": {
+  "name": "아이에스동서㈜",
+  "corp_code": "00115977",
+  "dart_name": "아이에스동서",
+  "stock": "010780",
+  "cands": 1
+ },
+ "1223": {
+  "name": "동원건설산업㈜",
+  "corp_code": "00974389",
+  "dart_name": "동원건설산업",
+  "stock": null,
+  "cands": 2
+ },
+ "010509": {
+  "name": "자이에스앤디㈜",
+  "corp_code": "00367844",
+  "dart_name": "자이에스앤디",
+  "stock": "317400",
+  "cands": 1
+ },
+ "1231": {
+  "name": "양우건설㈜",
+  "corp_code": "00139621",
+  "dart_name": "양우건설",
+  "stock": null,
+  "cands": 1
+ },
+ "240": {
+  "name": "신동아건설㈜",
+  "corp_code": "00135883",
+  "dart_name": "신동아건설",
+  "stock": null,
+  "cands": 1
+ },
+ "40": {
+  "name": "㈜대명건설",
+  "corp_code": "01719822",
+  "dart_name": "대명건설",
+  "stock": null,
+  "cands": 3
+ },
+ "010462": {
+  "name": "㈜시티건설",
+  "corp_code": "01069921",
+  "dart_name": "시티건설",
+  "stock": null,
+  "cands": 2
+ },
+ "020347": {
+  "name": "㈜동아지질",
+  "corp_code": "00178754",
+  "dart_name": "동아지질",
+  "stock": "028100",
+  "cands": 1
+ },
+ "050130": {
+  "name": "㈜모아주택산업",
+  "corp_code": "00121358",
+  "dart_name": "모아주택산업",
+  "stock": null,
+  "cands": 1
+ },
+ "1106": {
+  "name": "㈜태왕이앤씨",
+  "corp_code": "00842594",
+  "dart_name": "태왕이앤씨",
+  "stock": null,
+  "cands": 1
+ },
+ "1737": {
+  "name": "일신건영㈜",
+  "corp_code": "00175146",
+  "dart_name": "일신건영",
+  "stock": null,
+  "cands": 1
+ },
+ "010480": {
+  "name": "㈜대림",
+  "corp_code": "00204688",
+  "dart_name": "대림",
+  "stock": null,
+  "cands": 9
+ },
+ "275": {
+  "name": "요진건설산업㈜",
+  "corp_code": "00142166",
+  "dart_name": "요진건설산업",
+  "stock": null,
+  "cands": 1
+ },
+ "207": {
+  "name": "금광기업㈜",
+  "corp_code": "00105545",
+  "dart_name": "금광기업",
+  "stock": null,
+  "cands": 1
+ },
+ "871": {
+  "name": "영진종합건설㈜",
+  "corp_code": "00141176",
+  "dart_name": "영진종합건설",
+  "stock": null,
+  "cands": 3
+ },
+ "1679": {
+  "name": "㈜금성백조건설",
+  "corp_code": "00609078",
+  "dart_name": "금성백조건설",
+  "stock": null,
+  "cands": 1
+ },
+ "010536": {
+  "name": "에스케이에코엔지니어링㈜",
+  "corp_code": "01594320",
+  "dart_name": "에스케이에코엔지니어링",
+  "stock": null,
+  "cands": 1
+ },
+ "010043": {
+  "name": "에이스건설㈜",
+  "corp_code": "00196510",
+  "dart_name": "에이스건설",
+  "stock": null,
+  "cands": 2
+ },
+ "97": {
+  "name": "삼환기업㈜",
+  "corp_code": "00129411",
+  "dart_name": "삼환기업",
+  "stock": "000360",
+  "cands": 1
+ },
+ "010485": {
+  "name": "우암건설㈜",
+  "corp_code": "01148848",
+  "dart_name": "우암건설",
+  "stock": null,
+  "cands": 1
+ },
+ "801": {
+  "name": "강산건설㈜",
+  "corp_code": "00100540",
+  "dart_name": "강산건설",
+  "stock": null,
+  "cands": 1
+ },
+ "2311": {
+  "name": "씨에이이앤씨㈜",
+  "corp_code": "00661227",
+  "dart_name": "씨에이이앤씨",
+  "stock": null,
+  "cands": 1
+ },
+ "2584": {
+  "name": "㈜우미개발",
+  "corp_code": "00259226",
+  "dart_name": "우미개발",
+  "stock": null,
+  "cands": 2
+ },
+ "974": {
+  "name": "㈜금성백조주택",
+  "corp_code": "00105828",
+  "dart_name": "금성백조주택",
+  "stock": null,
+  "cands": 1
+ },
+ "120029": {
+  "name": "㈜원건설",
+  "corp_code": "00455732",
+  "dart_name": "원건설",
+  "stock": null,
+  "cands": 2
+ },
+ "1780": {
+  "name": "㈜서해종합건설",
+  "corp_code": "00131577",
+  "dart_name": "서해종합건설",
+  "stock": null,
+  "cands": 2
+ },
+ "010522": {
+  "name": "㈜이안알앤씨",
+  "corp_code": "01010147",
+  "dart_name": "이안알앤씨",
+  "stock": null,
+  "cands": 1
+ },
+ "885": {
+  "name": "경동건설㈜",
+  "corp_code": "00101479",
+  "dart_name": "경동건설",
+  "stock": null,
+  "cands": 2
+ },
+ "010146": {
+  "name": "㈜보미건설",
+  "corp_code": "00246611",
+  "dart_name": "보미건설",
+  "stock": null,
+  "cands": 1
+ },
+ "785": {
+  "name": "신원종합개발㈜",
+  "corp_code": "00136925",
+  "dart_name": "신원종합개발",
+  "stock": "017000",
+  "cands": 1
+ },
+ "1200": {
+  "name": "㈜화성개발",
+  "corp_code": "00188900",
+  "dart_name": "화성개발",
+  "stock": null,
+  "cands": 3
+ },
+ "150030": {
+  "name": "위본건설㈜",
+  "corp_code": "00613770",
+  "dart_name": "위본건설",
+  "stock": null,
+  "cands": 1
+ },
+ "050132": {
+  "name": "보광종합건설㈜",
+  "corp_code": "01018291",
+  "dart_name": "보광종합건설",
+  "stock": null,
+  "cands": 2
+ },
+ "1530": {
+  "name": "㈜한양건설",
+  "corp_code": "00493909",
+  "dart_name": "한양건설",
+  "stock": null,
+  "cands": 2
+ },
+ "1227": {
+  "name": "㈜모아종합건설",
+  "corp_code": "00360081",
+  "dart_name": "모아종합건설",
+  "stock": null,
+  "cands": 1
+ },
+ "776": {
+  "name": "대상건설㈜",
+  "corp_code": "00603597",
+  "dart_name": "대상건설",
+  "stock": null,
+  "cands": 3
+ },
+ "1500": {
+  "name": "이수건설㈜",
+  "corp_code": "00115144",
+  "dart_name": "이수건설",
+  "stock": null,
+  "cands": 1
+ },
+ "1901": {
+  "name": "에스엠상선㈜",
+  "corp_code": "00219167",
+  "dart_name": "에스엠상선",
+  "stock": null,
+  "cands": 2
+ },
+ "572": {
+  "name": "㈜까뮤이앤씨",
+  "corp_code": "00129420",
+  "dart_name": "까뮤이앤씨",
+  "stock": "013700",
+  "cands": 1
+ },
+ "010387": {
+  "name": "㈜농협네트웍스",
+  "corp_code": "00371944",
+  "dart_name": "농협네트웍스",
+  "stock": null,
+  "cands": 1
+ },
+ "34": {
+  "name": "동아건설산업㈜",
+  "corp_code": "00116578",
+  "dart_name": "동아건설산업",
+  "stock": null,
+  "cands": 1
+ },
+ "361": {
+  "name": "㈜동양",
+  "corp_code": "00117337",
+  "dart_name": "동양",
+  "stock": "001520",
+  "cands": 3
+ },
+ "23": {
+  "name": "풍림산업㈜",
+  "corp_code": "00155498",
+  "dart_name": "풍림산업",
+  "stock": "001310",
+  "cands": 1
  }
 }
