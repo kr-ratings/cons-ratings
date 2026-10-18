@@ -405,7 +405,7 @@ def doc_holders(D, corp_code, names, today, cache, log=print):
     since = (today - dt.timedelta(days=550)).strftime("%Y%m%d")
     reps = _reports(D, corp_code, since, "F", AUD_RX, "audit")
     for r in sorted(reps.values(), key=lambda r: (-r["y"], r["c"])):  # 최신 연도, 별도 먼저
-        key = "sh2:" + r["no"]
+        key = "sh3:" + r["no"]
         if key not in cache:
             try:
                 cache[key] = audit_fs.shareholders(r["no"]) or []
@@ -419,7 +419,7 @@ def doc_holders(D, corp_code, names, today, cache, log=print):
     for x in d.get("list", []) if d.get("status") == "000" else []:
         if not GROUP_RX.search(x.get("report_nm", "")):
             continue
-        key = "sh2:" + x["rcept_no"]
+        key = "sh3:" + x["rcept_no"]
         if key not in cache:
             try:
                 cache[key] = audit_fs.group_holders(x["rcept_no"], names) or []
@@ -577,7 +577,7 @@ def collect(rows, prev, now, log=print):
                 errors.append(f"주주 {k}: {str(e)[:60]}")
             time.sleep(0.1)
     keep = {no for v in co.values() if v.get("fin") for no in v["fin"].get("rcepts", [])}
-    keep |= {"sh2:" + v["sh"]["no"] for v in co.values() if v.get("sh") and v["sh"].get("no")}
+    keep |= {"sh3:" + v["sh"]["no"] for v in co.values() if v.get("sh") and v["sh"].get("no")}
     afs_cache = {r: x for r, x in afs_cache.items() if r in keep}
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")
     return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors, "afs": afs_cache}

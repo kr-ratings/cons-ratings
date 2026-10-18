@@ -209,10 +209,48 @@ def _holders_from_table(t):
     return None
 
 
-TEXT_RX = [
-    re.compile(r"주주는\s*([^,()（]{2,40}?)\s*[\(（][^)）]*?지분율\s*([\d.]+)\s*%"),
-    re.compile(r"([가-힣A-Za-z㈜()][^\s,]{1,29})(?:이|가)\s*(?:발행주식(?:총수)?의\s*)?([\d.]+)\s*%\s*를?\s*(?:보유|소유)"),
+TITLE = r"(?:\s?(?:회장|의장|대표이사|대표|사장|님))?"
+NAME = r"((?:\(주\)|㈜|\(재\))?[가-힣A-Za-z][가-힣A-Za-z0-9&]*(?:\(주\)|㈜|\(유\))?" + TITLE + r")"
+PAIR_RX = re.compile(NAME + r"\s*[\(（]\s*(?:지분율\s*)?([\d.]+)\s*%\s*[\)）]")
+TEXT_PATTERNS = [
+    (re.compile(r"([\d.]+)\s*%\s*(?:의\s*지분)?(?:을|를)?\s*(?:보유|소유|가지고)(?:하고)?\s*있는\s*" + NAME), (2, 1)),
+    (re.compile(NAME + r"(?:이|가)\s*[\d,]+\s*주\s*\(\s*지분율\s*([\d.]+)\s*%\s*\)"), (1, 2)),
+    (re.compile(r"대주주\s*([가-힣]+)\s*및\s*특수관계(?:자|인)의\s*지분율은\s*([\d.]+)\s*%"), (1, 2)),
+    (re.compile(r"(대주주\s*(?:와\s*그|및)\s*(?:그\s*)?특수관계(?:자|인))(?:이|가|의)?\s*(?:소유의\s*회사)?\s*(?:지분율은\s*)?([\d.]+)\s*%"), (1, 2)),
 ]
+DROP = re.compile(r"종속|관계기업|투자|피투자|취득|매각|양수|양도|출자|지분법")
+
+
+def _clean_nm(n):
+    n = re.sub(r"^(최대주주는|주요\s*주주는|주주는|대주주인|대주주|최대주주인)\s*", "", n.strip())
+    n = re.sub(r"(입니다|이며|이고|이다)$", "", n)
+    return re.sub(r"\s?(회장|의장|대표이사|대표|사장|님)$", "", n).strip()
+
+
+def _holders_from_text(text):
+    """주석 1(회사의 개요) 문장에서 주주와 지분율을 읽는다"""
+    sents = re.split(r"(?<=다)\.\s|\.\s(?=\(?\d)", text[:6000])
+    for sent in sents:
+        if not re.search(r"주주|지분", sent) or DROP.search(sent):
+            continue
+        if re.search(r"주주|지분율", sent):
+            pairs = [(_clean_nm(m.group(1)), float(m.group(2))) for m in PAIR_RX.finditer(sent)]
+            pairs = [(n, v) for n, v in pairs if len(n) >= 2 and 0 < v <= 100 and n not in ("지분율",)]
+            if pairs:
+                return [{"nm": n, "pct": round(v, 2)} for n, v in pairs]
+        for rx, (ni, vi) in TEXT_PATTERNS:
+            m = rx.search(sent)
+            if m:
+                v = float(m.group(vi))
+                if 0 < v <= 100:
+                    nm = _clean_nm(m.group(ni))
+                    if "특수관계" in m.group(0):
+                        nm = "대주주 및 특수관계인" if (not nm or "특수관계" in nm) else f"{nm} 및 특수관계인"
+                    return [{"nm": nm, "pct": round(v, 2)}]
+        m = re.search(r"지분은\s*(?:대표이사\s*)?([가-힣]+\s*외\s*\d+\s*인)(?:으로|로)\s*구성", sent)
+        if m:
+            return [{"nm": re.sub(r"\s*외\s*", " 외 ", m.group(1)), "pct": 100.0}]
+    return None
 
 
 def shareholders(rcept_no):
@@ -227,13 +265,10 @@ def shareholders(rcept_no):
             h = _holders_from_table(t)
             if h:
                 return sorted(h, key=lambda x: -x["pct"])
-        text = re.sub(r"\s+", " ", soup.get_text(" "))[:8000]
-        for rx in TEXT_RX:
-            m = rx.search(text)
-            if m:
-                v = float(m.group(2))
-                if 50 <= v <= 100:
-                    return [{"nm": m.group(1).strip(), "pct": round(v, 2)}]
+        text = re.sub(r"\s+", " ", soup.get_text(" "))
+        h = _holders_from_text(text)
+        if h:
+            return h
     return None
 
 
