@@ -450,7 +450,13 @@ def finish_holders(sh):
             tre += x["pct"]
         elif not re.match(r"^(기타(주주|소액주주)?|그외|그외주주)$", n):
             named.append(x)
-    named = sorted(named, key=lambda x: -x["pct"])[:8]
+    merged = {}
+    for x in named:  # 같은 주주가 보통주·우선주 등으로 두 줄이면 합친다
+        if x["nm"] in merged:
+            merged[x["nm"]]["pct"] = round(merged[x["nm"]]["pct"] + x["pct"], 2)
+        else:
+            merged[x["nm"]] = x
+    named = sorted(merged.values(), key=lambda x: -x["pct"])[:8]
     etc = round(100 - sum(x["pct"] for x in named) - tre, 2)
     return {**sh, "list": named, "treasury": round(tre, 2) if tre else None, "etc": etc if etc > 0.005 else None}
 
