@@ -816,7 +816,7 @@ function feedItems(){
   if(DART&&DART.co) for(const [reg,c] of Object.entries(DART.co)){
     const r=BYREG[reg]; if(!r) continue;
     for(const x of c.disc||[]){ if(x.d<since) continue;
-      items.push({d:x.d,t:"disc",reg,co:r.name,pri:x.cat==="리스크"?0:x.cat==="정기"?4:1,html:`${esc(x.nm)}${x.rm?`<span class="sm">${esc(x.rm)}</span>`:""}`,url:dartUrl(x.no),tag:`공시 · ${x.cat}`,meta:"DART"}); }
+      items.push({d:x.d,t:"disc",reg,co:r.name,pri:x.cat==="리스크"?0:x.cat==="정기"?4:1,html:esc(x.nm),url:dartUrl(x.no),tag:`공시 · ${x.cat}`,meta:"DART"}); }
   }
   for(const n of NEWS){
     const d=n.d.slice(0,10); if(d<since) continue;
