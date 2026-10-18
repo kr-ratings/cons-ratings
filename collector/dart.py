@@ -171,7 +171,8 @@ def financials(D, codes, today):
                 k = ACCT.get(x.get("account_nm", "").strip())
                 if not k or k in cur:
                     continue
-                cur[k] = _amt(x.get("thstrm_amount"))
+                # 분기·반기 손익은 thstrm_amount 가 3개월치라서 누적(thstrm_add_amount)을 쓴다
+                cur[k] = _amt(x.get("thstrm_add_amount")) if (label != "FY" and k in ("rev", "op", "ni") and x.get("thstrm_add_amount")) else _amt(x.get("thstrm_amount"))
                 prv[k] = _amt(x.get("frmtrm_amount"))
                 pp[k] = _amt(x.get("bfefrmtrm_amount"))
             ent = res.setdefault(cc, {"basis": "연결" if fs == "CFS" else "별도", "periods": []})
