@@ -448,7 +448,8 @@ def collect(rows, prev, now, log=print):
                     if not x or x.get("v") != audit_fs.VERSION:
                         x = afs_cache[r["no"]] = audit_fs.parse(r["no"], prefer_cons=f["basis"] == "연결") or {"v": audit_fs.VERSION}
                         time.sleep(0.5)
-                    if not x.get("periods") or x.get("consolidated") != (f["basis"] == "연결"):
+                    # 연결 기준인데 원문에 별도만 있으면 그해는 종속회사가 없어 연결 = 별도인 경우라 그대로 쓴다
+                    if not x.get("periods") or (f["basis"] == "별도" and x.get("consolidated")):
                         continue
                     for key in F6:
                         if p.get(key) is None and x["periods"][0].get(key) is not None:
