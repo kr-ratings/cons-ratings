@@ -429,8 +429,37 @@ def collect(rows, prev, now, log=print):
                     v["audit"] = aud
             except Exception as e:
                 errors.append(f"감사보고서 {k}: {str(e)[:60]}")
-    else:
-        afs_cache = prev.get("afs") or {}
+        # 재무 API에 빠진 항목(예: 일부 연도 당기순이익)은 그해 사업보고서 원문 재무제표에서 채운다
+        F6 = ("rev", "op", "ni", "assets", "liab", "equity")
+        for k, v in co.items():
+            f = v.get("fin")
+            if not f or f.get("src"):
+                continue
+            gaps = [p for p in f["periods"] if p["t"] == "FY" and any(p.get(x) is None for x in F6)]
+            if not gaps:
+                continue
+            try:
+                biz = _reports(D, v["corp_code"], (today - dt.timedelta(days=365 * 7)).strftime("%Y%m%d"), "A", BIZ_RX, "biz")
+                for p in gaps:
+                    r = biz.get(("biz", None, int(p["p"])))
+                    if not r:
+                        continue
+                    x = afs_cache.get(r["no"])
+                    if not x or x.get("v") != audit_fs.VERSION:
+                        x = afs_cache[r["no"]] = audit_fs.parse(r["no"], prefer_cons=f["basis"] == "연결") or {"v": audit_fs.VERSION}
+                        time.sleep(0.5)
+                    if not x.get("periods") or x.get("consolidated") != (f["basis"] == "연결"):
+                        continue
+                    for key in F6:
+                        if p.get(key) is None and x["periods"][0].get(key) is not None:
+                            p[key] = x["periods"][0][key]
+                    f.setdefault("rcepts", []).append(r["no"])
+                    if p.get("liab") is not None and p.get("equity"):
+                        p["dr"] = round(p["liab"] / p["equity"] * 100, 1) if p["equity"] > 0 else None
+                    if p.get("op") is not None and p.get("rev"):
+                        p["opm"] = round(p["op"] / p["rev"] * 100, 1)
+            except Exception as e:
+                errors.append(f"재무 보완 {k}: {str(e)[:60]}")
     keep = {no for v in co.values() if v.get("fin") for no in v["fin"].get("rcepts", [])}
     afs_cache = {r: x for r, x in afs_cache.items() if r in keep}
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")
