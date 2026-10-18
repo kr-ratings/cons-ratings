@@ -641,7 +641,7 @@ function rowHTML(r){
   return `<tr>
     <td class="rank s1">${r.rank}</td>
     <td class="mv s2 ${mvc}" title="${r.prev!=null?`전년 ${r.prev}위 → 올해 ${r.rank}위`:"전년 순위 없음"}">${mvt}</td>
-    <td class="co s3"><button type="button" class="cob" data-reg="${esc(regOf(r))}" title="${esc(r.name)} 상세 보기 · 등급 이력 · 재무 · 공시 · 기사">${WATCH.has(regOf(r))?'<span class="wst" aria-label="관심">★</span>':""}${esc(r.name)}</button>${r.region?`<small>${esc(r.region)}</small>`:""}</td>
+    <td class="co s3"><button type="button" class="cob" data-reg="${esc(regOf(r))}" title="${esc(r.name)} 상세 보기 · 등급 이력 · 재무 · 공시 · 기사">${WATCH.has(regOf(r))?'<span class="wst" aria-label="관심">★</span>':""}${esc(r.name)}</button></td>
     <td class="num amt"><div class="aw"><span title="${esc(amtTip(r))}">${fmtAmt(r.amount)}</span><span class="bar" aria-hidden="true"><i style="width:${(r.amount/MAX*100).toFixed(2)}%"></i></span></div></td>
     <td>${b?`<span class="best grade ${gcls(b)}">${esc(clean(b.grade))}</span>${kdTag(b.kind)}`:'<span class="dim">–</span>'}</td>
     ${AG.map((a,i)=>ratingCell(r,a,i===0)).join("")}</tr>`;
