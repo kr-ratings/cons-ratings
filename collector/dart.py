@@ -135,8 +135,8 @@ def disclosures(D, corp_code, since):
         for x in d.get("list", []):
             nm = re.sub(r"\s+", " ", x.get("report_nm", "")).strip()
             c = classify(nm)
-            if not c:
-                continue
+            if not c or (nm.startswith("[기재정정]") and c in ("수주", "정기")):
+                continue  # 공급계약 진행률 정정 등은 너무 잦아서 제외
             rd = x.get("rcept_dt", "")
             out.append({"d": f"{rd[:4]}-{rd[4:6]}-{rd[6:8]}", "nm": nm, "cat": c, "no": x.get("rcept_no"),
                         "flr": x.get("flr_nm"), "rm": x.get("rm") or None})
@@ -241,7 +241,8 @@ def collect(rows, prev, now, log=print):
         if not m:
             continue
         p = co_prev.get(k, {})
-        old = [x for x in p.get("disc", []) if x["d"] >= since_full]
+        old = [x for x in p.get("disc", []) if x["d"] >= since_full
+               and not (x["nm"].startswith("[기재정정]") and x["cat"] in ("수주", "정기"))]
         since = since_full if not old else (today - dt.timedelta(days=10)).isoformat()
         try:
             new = disclosures(D, m["corp_code"], since)
@@ -259,7 +260,7 @@ def collect(rows, prev, now, log=print):
     # 재무: 7일마다, 또는 새 정기보고서가 접수됐을 때
     last = prev.get("fin_checked")
     new_periodic = any(x["cat"] == "정기" and (not last or x["d"] >= last) for v in co.values() for x in v["disc"])
-    if not last or new_periodic or (today - dt.date.fromisoformat(last)).days >= FIN_REFRESH_DAYS:
+    if os.environ.get("DART_FIN_FORCE") or not last or new_periodic or (today - dt.date.fromisoformat(last)).days >= FIN_REFRESH_DAYS:
         try:
             fin = financials(D, sorted({v["corp_code"] for v in co.values()}), today)
             for k, v in co.items():
@@ -271,5 +272,22 @@ def collect(rows, prev, now, log=print):
             fin_checked = last
     else:
         fin_checked = last
+    # 구조화 재무가 없는 회사(비상장 외감법인)는 최근 감사보고서 원문 링크를 찾아 둔다(재무 갱신 때만)
+    if fin_checked == today.isoformat():
+        since_a = (today - dt.timedelta(days=550)).strftime("%Y%m%d")
+        for k, v in co.items():
+            if v.get("fin") or (v.get("audit") and v["audit"]["d"] >= (today - dt.timedelta(days=400)).isoformat()):
+                continue
+            try:
+                d = D.json("list.json", corp_code=v["corp_code"], bgn_de=since_a, pblntf_ty="F", page_count=20)
+                for x in d.get("list", []) if d.get("status") == "000" else []:
+                    nm = re.sub(r"\s+", " ", x.get("report_nm", "")).strip()
+                    if "감사보고서" in nm and "정정" not in nm:
+                        rd = x["rcept_dt"]
+                        v["audit"] = {"d": f"{rd[:4]}-{rd[4:6]}-{rd[6:8]}", "no": x["rcept_no"], "nm": nm}
+                        break
+            except Exception as e:
+                errors.append(f"감사보고서 {k}: {str(e)[:40]}")
+            time.sleep(0.1)
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")
     return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors}

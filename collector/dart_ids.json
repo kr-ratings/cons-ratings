@@ -574,5 +574,33 @@
   "corp_code": "00155498",
   "dart_name": "풍림산업",
   "stock": "001310"
+ },
+ "603": {
+  "name": "아이파크현대산업개발㈜",
+  "corp_code": "01310269",
+  "dart_name": "HDC현대산업개발",
+  "stock": "294870",
+  "manual": true
+ },
+ "569": {
+  "name": "에이치엘디앤아이한라㈜",
+  "corp_code": "00161116",
+  "dart_name": "HL D&I",
+  "stock": "014790",
+  "manual": true
+ },
+ "1732": {
+  "name": "씨제이대한통운㈜",
+  "corp_code": "00113410",
+  "dart_name": "CJ대한통운",
+  "stock": "000120",
+  "manual": true
+ },
+ "798": {
+  "name": "에스지씨이앤씨㈜",
+  "corp_code": "00141246",
+  "dart_name": "SGC E&C",
+  "stock": "016250",
+  "manual": true
  }
 }

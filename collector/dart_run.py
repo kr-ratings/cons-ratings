@@ -1,11 +1,12 @@
 """DART 공시·재무만 따로 수집 (Actions 'Run workflow'에서 only=dart 로 실행)"""
-import json, sys, datetime as dt
+import json, os, sys, datetime as dt
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import dart
 
 DATA = Path(__file__).resolve().parent.parent / "data"
+os.environ.setdefault("DART_FIN_FORCE", "1")
 now = dt.datetime.now(dt.timezone(dt.timedelta(hours=9)))
 rows = json.loads((DATA / "contractors.json").read_text("utf-8"))["rows"]
 prev = json.loads((DATA / "dart.json").read_text("utf-8")) if (DATA / "dart.json").exists() else {}
