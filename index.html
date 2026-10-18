@@ -468,7 +468,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
     <p>시공능력평가는 대한건설협회가 매년 7월 말 공시하는 건설사별 1건 공사 수행 능력의 금액 평가입니다. 공사실적평가액, 경영평가액, 기술능력평가액, 신인도평가액을 합산하며 발주처의 입찰참가 자격 제한과 업계 순위(도급순위)의 기준으로 쓰입니다.</p>
     <p>순위와 평가액은 대한건설협회가 공시한 엑셀의 토목건축공사업(토건) 기준이며, 평가액에 마우스를 올리면 항목별 평가액이 보입니다. 전년 순위는 건설업 등록번호로 맞추므로 사명이 바뀐 회사도 이어집니다.</p>
     <p>등급은 각 평가사 기업 페이지의 현재 회사채 신용등급과 Outlook, 평가일입니다. 회사채 등급이 없는 회사는 기업신용등급(ICR)을, 그것도 없으면 기업어음(CP) 등급을 표시하고 ICR · CP 표시를 붙입니다. 회사채만 보려면 필터의 '회사채만'을 누르세요. 평가사가 등급을 내지 않았거나 유효기간이 끝난 경우 – 로 표시합니다. 최고등급은 3사 중 가장 높은 등급이며, 평가일이 1년을 넘은 등급은 날짜를 주황색으로 표시하니 평가사 원문에서 한 번 더 확인하시기 바랍니다.</p>
-    <p>최근 변동은 평가사 3사의 등급 평가(상향·하향·전망 변경·유지), DART 주요 공시(수주·채무보증·자금조달·지배구조·리스크 관련, 정기보고서), 회사 이름이 제목에 나온 기사 중 리스크·신용·실적·수주·지배구조 주제만 골라 보여 줍니다. 기사는 구글 뉴스 검색 결과의 제목·출처·링크만 싣고, 같은 내용을 여러 매체가 쓴 경우 하나로 묶습니다. 회사명을 누르면 등급 이력, DART 재무 요약(최근 3개 사업연도와 올해 최신 분기), 최근 공시·기사를 한 화면에서 보고 심사요청서용 요약을 복사할 수 있습니다. ☆ 관심 회사는 이 브라우저에만 저장됩니다.</p>
+    <p>최근 변동은 평가사 3사의 등급 평가(상향·하향·전망 변경·유지), DART 주요 공시(수주·채무보증·자금조달·지배구조·리스크 관련, 정기보고서), 회사 이름이 제목에 나온 기사 중 리스크·신용·실적·수주·지배구조 주제만 골라 보여 줍니다. 기사는 구글 뉴스 검색 결과의 제목·출처·링크만 싣고, 같은 내용을 여러 매체가 쓴 경우 하나로 묶습니다. 회사명을 누르면 등급 이력, DART 재무 요약(최근 3개 사업연도와 올해 최신 분기), 최근 공시·기사를 한 화면에서 볼 수 있습니다. ☆ 관심 회사는 이 브라우저에만 저장됩니다.</p>
     <p>공사비 지표는 한국건설기술연구원이 매월 말 발표하는 건설공사비지수(2020년 = 100)입니다. 발표 엑셀에 2000년부터의 전 기간이 들어 있어 과거 수정치도 함께 반영됩니다.</p>
     <p>매일 오전(08:00)에 원 출처에서 시공능력평가와 등급을 다시 받아 갱신합니다. 시공능력평가는 매년 7월 말 새 공시가 올라오면 다음 날 아침에 반영됩니다.</p>
   </details>
@@ -853,7 +853,6 @@ function openCo(reg,push=true){
   $("#dr-x").addEventListener("click",closeCo);
   $("#dr-star").addEventListener("click",e=>{ WATCH.has(reg)?WATCH.delete(reg):WATCH.add(reg); saveWatch();
     e.currentTarget.setAttribute("aria-pressed",String(WATCH.has(reg))); e.currentTarget.textContent=WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"; renderFeed(); render(); });
-  $("#dr-copy").addEventListener("click",()=>copyText(coSummary(r),"심사요청서용 요약을 복사했습니다"));
   $("#dr-link").addEventListener("click",()=>copyText(`${location.origin}${location.pathname}#co=${encodeURIComponent(reg)}`,"이 회사 링크를 복사했습니다"));
 }
 function closeCo(){
@@ -873,19 +872,6 @@ function finPeriods(f){
   const fy=f.periods.filter(p=>p.t==="FY").sort((a,b)=>a.p<b.p?-1:1).slice(-3);
   const q=f.periods.filter(p=>p.t!=="FY").sort((a,b)=>a.p<b.p?1:-1)[0];
   return q?[...fy,q]:fy;
-}
-function coSummary(r){
-  const L=[`[시공사 개요] ${r.name}`];
-  L.push(`- 시공능력평가: ${META.year}년 ${r.rank}위 (평가액 ${fmtAmt(r.amount)}억원${r.prev!=null?`, 전년 ${r.prev}위`:""})`);
-  const rt=AG.map(a=>{const x=r.ratings[a]; return x&&x.grade?`${a} ${x.grade}${x.kind&&x.kind!=="bond"?`(${KINDS[x.kind]})`:""}${x.outlook?`·${x.outlook}`:""}${x.date?` '${x.date.slice(2).replace(/-/g,".")}`:""}`:null;}).filter(Boolean);
-  L.push(`- 신용등급: ${rt.length?rt.join(" / "):"공시 등급 없음"}`);
-  const f=finOf(regOf(r)), ps=finPeriods(f);
-  if(ps.length){
-    L.push(`- 재무(${f.basis}, 억원):`);
-    for(const p of ps) L.push(`  ${p.t==="FY"?p.p+"년":p.p+" 누적"}: 매출 ${won(p.rev)} · 영업이익 ${won(p.op)}${p.opm!=null?`(${p.opm}%)`:""} · 순이익 ${won(p.ni)} · 부채비율 ${p.dr!=null?p.dr+"%":"–"}`);
-  }
-  L.push(`출처: 대한건설협회, 한국신용평가·한국기업평가·나이스신용평가${ps.length?", DART":""} (${location.host||"cons.namepf.com"}, ${todayS()} 기준)`);
-  return L.join("\n");
 }
 function coHTML(r){
   const reg=regOf(r), mvt=r.prev==null?"전년 순위 없음":r.mv>0?`전년 ${r.prev}위 → ▲${r.mv}`:r.mv<0?`전년 ${r.prev}위 → ▼${-r.mv}`:`전년 ${r.prev}위 · 유지`;
@@ -917,8 +903,7 @@ function coHTML(r){
       <div class="meta"><span>시평 <b>${r.rank}</b>위</span><span>${mvt}</span><span>평가액 <b>${fmtAmt(r.amount)}</b>억원</span>${r.region?`<span>${esc(r.region)}</span>`:""}</div></div>
       <button type="button" class="xbtn" id="dr-x" aria-label="닫기">×</button></div>
     <div class="dr-b">
-      <div class="acts"><button type="button" class="dl" id="dr-copy" title="시평·등급·재무 요약을 글로 복사합니다">심사요청서용 요약 복사</button>
-        <button type="button" class="dl" id="dr-star" aria-pressed="${WATCH.has(reg)}">${WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"}</button>
+      <div class="acts"><button type="button" class="dl" id="dr-star" aria-pressed="${WATCH.has(reg)}">${WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"}</button>
         <button type="button" class="dl" id="dr-link">링크 복사</button></div>
       <div class="card"><h3>신용등급 <span>평가사 3사 현재</span></h3><div class="rnow">${now}</div>${histT}</div>
       <div class="card"><h3>재무 요약 ${dc?`<a href="${dartCo}" target="_blank" rel="noopener">DART 공시 검색 →</a>`:""}</h3>${fin}</div>
