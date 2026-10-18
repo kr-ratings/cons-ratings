@@ -28,8 +28,7 @@
    "ok": true
   },
   "DART": {
-   "ok": false,
-   "error": "DART 고유번호 못 찾음 4개사"
+   "ok": true
   }
  }
 }
