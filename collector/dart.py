@@ -3,7 +3,7 @@
 1) 고유번호 매핑: corpCode.xml 의 회사명을 시평 회사명과 맞춘다. 같은 이름이 여럿이면 업종(건설업)으로 고른다.
    결과는 collector/dart_ids.json 에 저장해 두고 다음부터 재사용한다(직접 고쳐 넣어도 된다).
 2) 공시: 회사별 최근 공시 목록(list.json)에서 실무에 의미 있는 공시만 분류해 최근 90일치를 남긴다.
-3) 재무: 다중회사 주요계정(fnlttMultiAcnt)으로 최근 사업연도 3개년 + 올해 최신 분기(누적)를 받는다.
+3) 재무: 다중회사 주요계정(fnlttMultiAcnt)으로 최근 5개 사업연도 + 올해 최신 분기(누적)를 받는다.
    정기보고서를 내지 않는 비상장 외감법인은 구조화된 재무가 없어서 감사보고서 원문 링크만 남긴다.
 """
 import io, json, os, re, time, zipfile, datetime as dt
@@ -165,6 +165,11 @@ def financials(D, codes, today):
             by.setdefault(x["corp_code"], []).append(x)
         for cc, xs in by.items():
             fs = "CFS" if any(x.get("fs_div") == "CFS" for x in xs) else "OFS"
+            if cc in res:  # 이미 받은 기간과 같은 기준(연결/별도)으로 맞춘다
+                want = "CFS" if res[cc]["basis"] == "연결" else "OFS"
+                if not any(x.get("fs_div") == want for x in xs):
+                    continue
+                fs = want
             xs = [x for x in xs if x.get("fs_div") == fs]
             cur, prv, pp = {}, {}, {}
             for x in xs:
@@ -177,10 +182,11 @@ def financials(D, codes, today):
                 pp[k] = _amt(x.get("bfefrmtrm_amount"))
             ent = res.setdefault(cc, {"basis": "연결" if fs == "CFS" else "별도", "periods": []})
             if label == "FY":
+                have = {p["p"] for p in ent["periods"]}
                 for y, vals in ((bsns_year, cur), (bsns_year - 1, prv), (bsns_year - 2, pp)):
-                    if any(v is not None for v in vals.values()):
+                    if f"{y}" not in have and any(v is not None for v in vals.values()):
                         ent["periods"].append({"p": f"{y}", "t": "FY", **vals})
-                ent["fy_rcept"] = xs[0].get("rcept_no") if xs else None
+                ent.setdefault("fy_rcept", xs[0].get("rcept_no") if xs else None)
             else:
                 if any(v is not None for v in cur.values()):
                     ent["periods"].insert(0, {"p": f"{bsns_year} {label}", "t": label, **cur})
@@ -189,7 +195,7 @@ def financials(D, codes, today):
     chunks = [codes[i:i + 90] for i in range(0, len(codes), 90)]
     # 최근 사업연도: 올해 3월 이후면 작년, 아니면 재작년부터 시도
     for ch in chunks:
-        pending = set(ch)
+        pending, latest = set(ch), {}
         for y in (year - 1, year - 2):
             if not pending:
                 break
@@ -197,7 +203,15 @@ def financials(D, codes, today):
             if d.get("status") == "000":
                 lst = d.get("list", [])
                 take(lst, y, "FY")
-                pending -= {x["corp_code"] for x in lst}
+                got = {x["corp_code"] for x in lst}
+                latest.update({c: y for c in got})
+                pending -= got
+        # 5개 사업연도: 사업보고서 한 건에 3개년이 들어 있으므로 3년 전 사업보고서로 나머지 2개년을 채운다
+        for y in sorted(set(latest.values())):
+            cs = sorted(c for c, v in latest.items() if v == y)
+            d = D.json("fnlttMultiAcnt.json", corp_code=",".join(cs), bsns_year=y - 3, reprt_code="11011")
+            if d.get("status") == "000":
+                take(d.get("list", []), y - 3, "FY")
         # 올해 최신 분기(3Q → 1H → 1Q)
         pending = set(ch)
         for code, label in REPRT[1:]:
@@ -209,6 +223,8 @@ def financials(D, codes, today):
                 take(lst, year, label)
                 pending -= {x["corp_code"] for x in lst}
     for ent in res.values():
+        fy = sorted((p for p in ent["periods"] if p["t"] == "FY"), key=lambda p: p["p"], reverse=True)[:5]
+        ent["periods"] = [p for p in ent["periods"] if p["t"] != "FY"] + fy
         for p in ent["periods"]:
             if p.get("liab") is not None and p.get("equity"):
                 p["dr"] = round(p["liab"] / p["equity"] * 100, 1) if p["equity"] > 0 else None
