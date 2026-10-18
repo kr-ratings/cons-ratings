@@ -206,12 +206,16 @@ def financials(D, codes, today):
                 got = {x["corp_code"] for x in lst}
                 latest.update({c: y for c in got})
                 pending -= got
-        # 5개 사업연도: 사업보고서 한 건에 3개년이 들어 있으므로 3년 전 사업보고서로 나머지 2개년을 채운다
-        for y in sorted(set(latest.values())):
-            cs = sorted(c for c, v in latest.items() if v == y)
-            d = D.json("fnlttMultiAcnt.json", corp_code=",".join(cs), bsns_year=y - 3, reprt_code="11011")
-            if d.get("status") == "000":
-                take(d.get("list", []), y - 3, "FY")
+        # 5개 사업연도: 사업보고서 한 건에 3개년이 들어 있으므로 2년 전(없으면 1년·3년 전) 사업보고서로 나머지를 채운다
+        nfy = lambda c: sum(1 for p in res.get(c, {}).get("periods", []) if p["t"] == "FY")
+        for off in (2, 1, 3):
+            for y in sorted(set(latest.values())):
+                cs = sorted(c for c, v in latest.items() if v == y and nfy(c) < 5)
+                if not cs:
+                    continue
+                d = D.json("fnlttMultiAcnt.json", corp_code=",".join(cs), bsns_year=y - off, reprt_code="11011")
+                if d.get("status") == "000":
+                    take(d.get("list", []), y - off, "FY")
         # 올해 최신 분기(3Q → 1H → 1Q)
         pending = set(ch)
         for code, label in REPRT[1:]:
