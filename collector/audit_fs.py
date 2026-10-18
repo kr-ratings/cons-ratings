@@ -156,3 +156,121 @@ def parse(rcept_no, prefer_cons=True):
     n = max(len(v) for v in vals.values())
     periods = [{k: (v[i] if i < len(v) else None) for k, v in vals.items()} for i in range(n)]
     return {"v": VERSION, "periods": periods, "consolidated": "연결" in node["text"]}
+
+
+def _nodes(rcept_no):
+    html = _get(f"{VIEW}/dsaf001/main.do", params={"rcpNo": rcept_no}).text
+    nodes = []
+    for m in re.finditer(r"node\d+\['text'\]\s*=\s*\"(.*?)\";(.*?)(?=node\d+\['text'\]|cnt\+\+|$)", html, re.S):
+        body = m.group(2)
+        g = lambda k: (re.search(rf"\['{k}'\]\s*=\s*\"(.*?)\"", body) or [None, None])[1]
+        nodes.append({"text": _sp(m.group(1)), "dcmNo": g("dcmNo"), "eleId": g("eleId"), "offset": g("offset"), "length": g("length"), "dtd": g("dtd")})
+    return nodes
+
+
+SKIP_NM = re.compile(r"^(합계|합 계|계|총계|총 계|소계|보통주|우선주|주주명|성명|구분|x|X)$")
+
+
+def _holders_from_table(t):
+    rows = t.find_all("tr")
+    if len(rows) < 2 or len(rows) > 60:
+        return None
+    head = " ".join(_sp(c.get_text(" ")) for tr in rows[:2] for c in tr.find_all(["th", "td"]))
+    if not (re.search(r"주주|성명", head) and re.search(r"지분|비율|%", head)):
+        return None
+    if re.search(r"종속|관계기업|회사명|투자", head) and not re.search(r"주주", head):
+        return None
+    out = []
+    for tr in rows:
+        cells = [re.sub(r"\s+", " ", c.get_text(" ", strip=True)) for c in tr.find_all(["td", "th"])]
+        nums = [(i, _num(c.replace("%", ""))) for i, c in enumerate(cells)]
+        pct = next(((i, v) for i, v in reversed(nums) if v is not None and 0 < v <= 100 and ("%" in cells[i] or "." in cells[i] or v == 100)), None)
+        if not pct:
+            continue
+        names = [c for c in cells[:pct[0]] if c and _num(c.replace("%", "")) is None and not SKIP_NM.match(_sp(c))]
+        if not names:
+            continue
+        nm = names[-1]
+        if re.search(r"합계|총계|소계", _sp(nm)):
+            continue
+        out.append({"nm": nm, "pct": round(pct[1], 2)})
+    tot = sum(x["pct"] for x in out)
+    if out and 95 <= tot <= 100.5:
+        return out
+    return None
+
+
+TEXT_RX = [
+    re.compile(r"주주는\s*([^,()（]{2,40}?)\s*[\(（][^)）]*?지분율\s*([\d.]+)\s*%"),
+    re.compile(r"([가-힣A-Za-z㈜()][^\s,]{1,29})(?:이|가)\s*(?:발행주식(?:총수)?의\s*)?([\d.]+)\s*%\s*를?\s*(?:보유|소유)"),
+]
+
+
+def shareholders(rcept_no):
+    """감사보고서 주석의 주주 현황 표(또는 '주주는 ○○(지분율 100%)' 문장) → [{"nm", "pct"}] 또는 None"""
+    nodes = _nodes(rcept_no)
+    cands = [n for n in nodes if n["text"] == "주석" and n["dcmNo"]] or [n for n in nodes if "재무제표" in n["text"] and "첨부" in n["text"]]
+    for node in cands:
+        r = _get(f"{VIEW}/report/viewer.do", params={"rcpNo": rcept_no, "dcmNo": node["dcmNo"], "eleId": node["eleId"],
+                                                      "offset": node["offset"], "length": node["length"], "dtd": node["dtd"]})
+        soup = BeautifulSoup(r.content, "html.parser")
+        for t in soup.find_all("table")[:40]:  # 주주 현황은 주석 앞부분(회사의 개요)에 있다
+            h = _holders_from_table(t)
+            if h:
+                return sorted(h, key=lambda x: -x["pct"])
+        text = re.sub(r"\s+", " ", soup.get_text(" "))[:8000]
+        for rx in TEXT_RX:
+            m = rx.search(text)
+            if m:
+                v = float(m.group(2))
+                if 50 <= v <= 100:
+                    return [{"nm": m.group(1).strip(), "pct": round(v, 2)}]
+    return None
+
+
+def _norm_co(n):
+    return re.sub(r"\s|\(주\)|㈜|주식회사|\(|\)", "", n or "")
+
+
+def group_holders(rcept_no, names):
+    """대규모기업집단현황공시 '소유지분현황' 표에서 이 회사 블록의 주주 → [{"nm", "rel", "pct"}] 또는 None"""
+    nodes = _nodes(rcept_no)
+    node = next((n for n in nodes if "소유지분현황" in n["text"] and n["dcmNo"]), None)
+    if not node:
+        return None
+    r = _get(f"{VIEW}/report/viewer.do", params={"rcpNo": rcept_no, "dcmNo": node["dcmNo"], "eleId": node["eleId"],
+                                                  "offset": node["offset"], "length": node["length"], "dtd": node["dtd"]})
+    soup = BeautifulSoup(r.content, "html.parser")
+    keys = {_norm_co(n) for n in names if n}
+    for t in soup.find_all("table"):
+        cur, out = None, []
+        for tr in t.find_all("tr"):
+            cells = [re.sub(r"\s+", " ", c.get_text(" ", strip=True)) for c in tr.find_all(["td", "th"])]
+            hit = next((c for c in cells[:3] if _norm_co(c) in keys), None)
+            if hit and _norm_co(hit) in keys and (cur is None or cells.index(hit) < 2):
+                if cur and out:
+                    break
+                cur = hit
+            elif cur and any(_norm_co(c) not in keys and re.search(r"\(주\)|㈜", c) for c in cells[:1]) and "동일인측" in " ".join(cells[:3]):
+                break  # 다음 회사 블록
+            if not cur:
+                continue
+            j = cells.index(hit) + 1 if hit in cells else 0
+            if any(re.search(r"합계|총 ?계", c) for c in cells):
+                if re.search(r"총 ?계", " ".join(cells)) and out:
+                    break
+                continue
+            nums = [(i, _num(c.replace("%", ""))) for i, c in enumerate(cells)]
+            pcts = [(i, v) for i, v in nums if v is not None and "%" in cells[i]]
+            if not pcts:
+                continue
+            first_num = next(i for i, v in nums if v is not None)
+            label = [c for c in cells[j:first_num] if c and c != "X"]
+            if not label:
+                continue
+            out.append({"nm": label[-1], "rel": label[-2] if len(label) >= 2 else None, "pct": round(pcts[-1][1], 2)})
+        if out:
+            tot = sum(x["pct"] for x in out)
+            if 50 <= tot <= 100.5:
+                return sorted(out, key=lambda x: -x["pct"])
+    return None

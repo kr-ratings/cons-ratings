@@ -276,6 +276,12 @@ table.mini th{font-size:.7rem;color:var(--muted);font-weight:600;background:none
 table.mini td.n,table.mini th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 table.mini tr:last-child td{border-bottom:0}
 .fin-box{overflow-x:auto}
+table.kv2{width:100%;border-collapse:collapse;font-size:.82rem}
+table.kv2 th,table.kv2 td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;position:static;width:auto;white-space:normal;word-break:keep-all}
+table.kv2 th{width:72px;font-size:.74rem;font-weight:600;color:var(--muted);background:var(--accent-soft);white-space:nowrap}
+table.kv2 tr:last-child th,table.kv2 tr:last-child td{border-bottom:0}
+table.mini td.sum{font-weight:600}
+@media (max-width:760px){table.kv2,table.kv2 tbody{display:block}table.kv2 tr{display:grid;grid-template-columns:76px 1fr}table.kv2 th{width:auto}table.kv2 td[colspan]{grid-column:auto}}
 .fin-box table.mini th:first-child,.fin-box table.mini td:first-child{position:sticky;left:0;background:var(--surface);z-index:1;box-shadow:inset -1px 0 0 var(--line)}
 .fin-box table.mini th.n{white-space:normal;line-height:1.25}
 @media (max-width:760px){.fin-box table.mini{font-size:.74rem}.fin-box table.mini th,.fin-box table.mini td{padding:5px 5px}}
@@ -877,6 +883,38 @@ function finPeriods(f){
   const q=f.periods.filter(p=>p.t!=="FY").sort((a,b)=>a.p<b.p?1:-1)[0];
   return q?[...fy,q]:fy;
 }
+const KSIC={"41":"종합 건설업","411":"건물 건설업","4111":"주거용 건물 건설업","4112":"비주거용 건물 건설업","412":"토목 건설업","4121":"지반조성 건설업","4122":"토목 시설물 건설업",
+  "42":"전문직별 공사업","68":"부동산업","6812":"부동산 개발 및 공급업","6811":"부동산 임대업","70":"회사 본부 및 경영 컨설팅 서비스업","71":"전문 서비스업",
+  "72":"건축기술·엔지니어링 및 기타 과학기술 서비스업","7211":"건축기술 서비스업","7212":"엔지니어링 서비스업","46":"도매 및 상품 중개업","49":"육상 운송업","50":"수상 운송업",
+  "52":"창고 및 운송관련 서비스업","20":"화학물질 및 화학제품 제조업","23":"비금속 광물제품 제조업","24":"1차 금속 제조업","25":"금속 가공제품 제조업","28":"전기장비 제조업",
+  "29":"기타 기계 및 장비 제조업","35":"전기·가스·증기 공급업","55":"숙박업","64":"금융업","74":"사업시설 관리 및 조경 서비스업","75":"사업 지원 서비스업"};
+const ksic=c=>{c=String(c||""); for(let n=c.length;n>=2;n--){ if(KSIC[c.slice(0,n)]) return KSIC[c.slice(0,n)]; } return c?`업종코드 ${c}`:"–";};
+const AGF={KIS:"한국신용평가",KR:"한국기업평가",NICE:"나이스신용평가"};
+function overviewHTML(r,dc){
+  const i=(dc&&dc.info)||{};
+  const est=i.est&&/^\d{8}$/.test(i.est)?`${i.est.slice(0,4)}년 ${i.est.slice(4,6)}월 ${i.est.slice(6)}일`:"–";
+  const b=AG.map(a=>({a,...(r.ratings[a]||{}),kind:(r.ratings[a]||{}).kind||"bond"})).filter(x=>x.grade).sort((x,y)=>gi(x)-gi(y))[0];
+  const rt=b?`${esc(b.grade)}${b.kind!=="bond"?` <span class="dim">${KINDS[b.kind]}</span>`:""}<span class="dim">(${AGF[b.a]}${b.date?` / ${b.date.replace(/-/g,".")}`:""})</span>`:'<span class="dim">공시 등급 없음</span>';
+  const row=(a,b,c,d)=>`<tr class="two"><th>${a}</th><td>${b}</td><th>${c}</th><td>${d}</td></tr>`;
+  return `<table class="kv2"><tbody>
+    ${row("회사명",esc(i.nm||r.name),"대표이사",esc((i.ceo||"–").replace(/\s*,\s*/g,", ")))}
+    ${row("설립일",est,"업종",esc(ksic(i.ind)))}
+    ${row("신용등급",rt,"도급순위",`${r.rank}위 <span class="dim">(${META.year}년 기준)</span>`)}
+    <tr><th>주소</th><td colspan="3">${esc(i.adres||"–")}</td></tr>
+    ${i.hm?`<tr><th>홈페이지</th><td colspan="3"><a href="${esc(/^https?:/.test(i.hm)?i.hm:"http://"+i.hm)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">${esc(i.hm)}</a></td></tr>`:""}
+  </tbody></table>`;
+}
+function holdersHTML(dc){
+  const sh=dc&&dc.sh;
+  if(!sh) return `<p class="hint">${DART?"공시된 주주 현황을 찾지 못했습니다.":"준비 중입니다."}</p>`;
+  const f=v=>v==null?"–":`${v.toFixed(1)}%`;
+  const hasRel=sh.list.some(x=>x.rel);
+  const rows=sh.list.map(x=>`<tr><td>${esc(x.nm)}</td>${hasRel?`<td class="dim">${esc((x.rel||"").replace(/\n/g," "))}</td>`:""}<td class="n">${f(x.pct)}</td></tr>`).join("");
+  const extra=(sh.treasury?`<tr><td>자기주식</td>${hasRel?"<td></td>":""}<td class="n">${f(sh.treasury)}</td></tr>`:"")+(sh.etc?`<tr><td>기타</td>${hasRel?"<td></td>":""}<td class="n">${f(sh.etc)}</td></tr>`:"");
+  return `<table class="mini" style="margin-top:0"><thead><tr><th>주주명</th>${hasRel?"<th>관계</th>":""}<th class="n">지분율</th></tr></thead><tbody>${rows}${extra}
+    <tr><td class="sum">합계</td>${hasRel?"<td></td>":""}<td class="n sum">100.0%</td></tr></tbody></table>
+    <p class="hint" style="margin-top:6px">${sh.asof?`${sh.asof.replace(/-/g,".")} 기준 · `:""}출처: ${sh.no?`<a href="${dartUrl(sh.no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(sh.src)}</a>`:esc(sh.src)}. 보통주 기준이며 기타는 표에 없는 주주 합계입니다.</p>`;
+}
 function coHTML(r){
   const reg=regOf(r), mvt=r.prev==null?"전년 순위 없음":r.mv>0?`전년 ${r.prev}위 → ▲${r.mv}`:r.mv<0?`전년 ${r.prev}위 → ▼${-r.mv}`:`전년 ${r.prev}위 · 유지`;
   const dc=DART&&DART.co&&DART.co[reg];
@@ -911,8 +949,10 @@ function coHTML(r){
     <div class="dr-b">
       <div class="acts"><button type="button" class="dl" id="dr-star" aria-pressed="${WATCH.has(reg)}">${WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"}</button>
         <button type="button" class="dl" id="dr-link">링크 복사</button></div>
-      <div class="card"><h3>신용등급 <span>평가사 3사 현재</span></h3><div class="rnow">${now}</div>${histT}</div>
+      <div class="card"><h3>회사 개요 <span>DART 기업개황</span></h3>${overviewHTML(r,dc)}</div>
+      <div class="card"><h3>주주 현황</h3>${holdersHTML(dc)}</div>
       <div class="card"><h3>재무 요약 ${dc?`<a href="${dartCo}" target="_blank" rel="noopener">DART 공시 검색 →</a>`:""}</h3>${fin}</div>
+      <div class="card"><h3>신용등급 <span>평가사 3사 현재</span></h3><div class="rnow">${now}</div>${histT}</div>
       <div class="card"><h3>최근 공시 <span>90일 · 주요 공시만</span></h3>${discH}</div>
       <div class="card"><h3>최근 기사 <span>30일 · 제목·출처만</span></h3>${newsH}</div>
       <div class="card"><h3>시공능력평가 <span>${META.year}년 · 억원</span></h3><div class="parts">${parts}</div>${r.civil!=null?`<p class="hint" style="margin-top:8px">토목분야 ${fmtAmt(r.civil)} · 건축분야 ${fmtAmt(r.arch)}억원</p>`:""}</div>

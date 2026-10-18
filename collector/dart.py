@@ -355,6 +355,100 @@ def audit_fin(D, corp_code, today, cache, log=print):
             "audit_no": src["no"], "audit_nm": src["nm"]}, latest
 
 
+REPRT_NM = {"11011": "사업보고서", "11012": "반기보고서", "11013": "1분기보고서", "11014": "3분기보고서"}
+
+
+def _pct(v):
+    try:
+        return float(str(v).replace(",", "").replace("%", ""))
+    except ValueError:
+        return None
+
+
+def api_holders(D, corp_code, today):
+    """사업·분기보고서의 최대주주 및 특수관계인 현황 + 자기주식 → sh 또는 None"""
+    y = today.year
+    for yr, rc in ((y, "11014"), (y, "11012"), (y, "11013"), (y - 1, "11011"), (y - 2, "11011")):
+        d = D.json("hyslrSttus.json", corp_code=corp_code, bsns_year=yr, reprt_code=rc)
+        if d.get("status") != "000" or not d.get("list"):
+            continue
+        lst = []
+        for x in d["list"]:
+            if not re.search(r"보통|의결권있는", x.get("stock_knd") or "") or (x.get("nm") or "").strip() in ("계", "합계", "-"):
+                continue
+            v = _pct(x.get("trmend_posesn_stock_qota_rt"))
+            if v is None or v <= 0:
+                continue
+            lst.append({"nm": x["nm"].strip(), "rel": re.sub(r"\s+", " ", x.get("relate") or "").strip() or None, "pct": round(v, 2)})
+        if not lst:
+            continue
+        tre = None
+        t = D.json("stockTotqySttus.json", corp_code=corp_code, bsns_year=yr, reprt_code=rc)
+        for x in t.get("list", []) if t.get("status") == "000" else []:
+            if "보통" in (x.get("se") or ""):
+                tot, tr = _pct(x.get("istc_totqy")), _pct(x.get("tesstk_co"))
+                if tot and tr is not None:
+                    tre = round(tr / tot * 100, 2)
+                break
+        asof = d["list"][0].get("stlm_dt")
+        return {"list": sorted(lst, key=lambda x: -x["pct"]), "treasury": tre, "asof": asof,
+                "src": f"{REPRT_NM[rc]} ({yr})", "no": d["list"][0].get("rcept_no")}
+    return None
+
+
+GROUP_RX = re.compile(r"대규모기업집단현황공시\[연1회공시")
+
+
+def doc_holders(D, corp_code, names, today, cache, log=print):
+    """감사보고서 주석 → 대규모기업집단현황공시 순으로 주주 현황 → sh 또는 None"""
+    import audit_fs
+    since = (today - dt.timedelta(days=550)).strftime("%Y%m%d")
+    reps = _reports(D, corp_code, since, "F", AUD_RX, "audit")
+    for r in sorted(reps.values(), key=lambda r: (-r["y"], r["c"])):  # 최신 연도, 별도 먼저
+        key = "sh:" + r["no"]
+        if key not in cache:
+            try:
+                cache[key] = audit_fs.shareholders(r["no"]) or []
+            except Exception as e:
+                log(f"주주 현황 읽기 실패 {r['no']}: {e}")
+                continue
+            time.sleep(0.4)
+        if cache[key]:
+            return {"list": cache[key], "asof": f"{r['y']}-12-31", "src": r["nm"], "no": r["no"]}
+    d = D.json("list.json", corp_code=corp_code, bgn_de=since, pblntf_ty="J", page_count=100)
+    for x in d.get("list", []) if d.get("status") == "000" else []:
+        if not GROUP_RX.search(x.get("report_nm", "")):
+            continue
+        key = "sh:" + x["rcept_no"]
+        if key not in cache:
+            try:
+                cache[key] = audit_fs.group_holders(x["rcept_no"], names) or []
+            except Exception as e:
+                log(f"기업집단 주주 읽기 실패 {x['rcept_no']}: {e}")
+                cache[key] = []
+            time.sleep(0.4)
+        if cache[key]:
+            rd = x["rcept_dt"]
+            return {"list": cache[key], "asof": f"{rd[:4]}-{rd[4:6]}-{rd[6:8]}", "src": "대규모기업집단현황공시", "no": x["rcept_no"]}
+        break  # 가장 최근 것 하나만
+    return None
+
+
+def finish_holders(sh):
+    """자기주식은 따로, 이름 있는 주주는 지분율 큰 순 8명까지, 나머지는 '기타'로 묶어 합계 100%"""
+    tre = sh.get("treasury") or 0
+    named = []
+    for x in sh["list"]:
+        n = re.sub(r"\s", "", x["nm"])
+        if n == "자기주식":
+            tre += x["pct"]
+        elif not re.match(r"^기타(주주|소액주주)?$", n):
+            named.append(x)
+    named = sorted(named, key=lambda x: -x["pct"])[:8]
+    etc = round(100 - sum(x["pct"] for x in named) - tre, 2)
+    return {**sh, "list": named, "treasury": round(tre, 2) if tre else None, "etc": etc if etc > 0.005 else None}
+
+
 def collect(rows, prev, now, log=print):
     key = os.environ.get("DART_API_KEY", "").strip()
     if not key:
@@ -391,7 +485,8 @@ def collect(rows, prev, now, log=print):
             errors.append(f"{r['name']} 공시: {str(e)[:60]}")
             disc = old
         co[k] = {"corp_code": m["corp_code"], "stock": m.get("stock"), "disc": disc[:60],
-                 **({"fin": p["fin"]} if p.get("fin") else {}), **({"audit": p["audit"]} if p.get("audit") else {})}
+                 **({"fin": p["fin"]} if p.get("fin") else {}), **({"audit": p["audit"]} if p.get("audit") else {}),
+                 **({"info": p["info"]} if p.get("info") else {}), **({"sh": p["sh"]} if p.get("sh") else {})}
         aud = next((x for x in disc if "감사보고서" in x["nm"]), None)
         if aud:
             co[k]["audit"] = {"d": aud["d"], "no": aud["no"], "nm": aud["nm"]}
@@ -461,7 +556,28 @@ def collect(rows, prev, now, log=print):
                         p["opm"] = round(p["op"] / p["rev"] * 100, 1)
             except Exception as e:
                 errors.append(f"재무 보완 {k}: {str(e)[:60]}")
+        # 회사 개요(기업개황)와 주주 현황 — 재무와 같은 주기로 갱신
+        for k, v in co.items():
+            try:
+                info = D.json("company.json", corp_code=v["corp_code"])
+                if info.get("status") == "000":
+                    v["info"] = {x: info.get(y) for x, y in (("nm", "corp_name"), ("ceo", "ceo_nm"), ("est", "est_dt"), ("adres", "adres"),
+                                                             ("ind", "induty_code"), ("hm", "hm_url"), ("cls", "corp_cls"))}
+            except Exception as e:
+                errors.append(f"기업개황 {k}: {str(e)[:40]}")
+            try:
+                f = v.get("fin") or {}
+                sh = api_holders(D, v["corp_code"], today) if not f.get("src") or f.get("src") == "사업보고서 원문" else None
+                if not sh:
+                    names = [ids.get(k, {}).get("dart_name"), ids.get(k, {}).get("name"), (v.get("info") or {}).get("nm")]
+                    sh = doc_holders(D, v["corp_code"], names, today, afs_cache, log)
+                if sh:
+                    v["sh"] = finish_holders(sh)
+            except Exception as e:
+                errors.append(f"주주 {k}: {str(e)[:60]}")
+            time.sleep(0.1)
     keep = {no for v in co.values() if v.get("fin") for no in v["fin"].get("rcepts", [])}
+    keep |= {"sh:" + v["sh"]["no"] for v in co.values() if v.get("sh") and v["sh"].get("no")}
     afs_cache = {r: x for r, x in afs_cache.items() if r in keep}
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")
     return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors, "afs": afs_cache}
