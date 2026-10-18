@@ -105,20 +105,24 @@ def map_ids(D, rows, ids):
             pick = cands[0]
         elif cands:
             scored = []
+            # 같은 이름이 여럿이면: 최근 2년 공시가 있는(살아 있는) 회사 → 건설업 → 공시 건수 많은 순
+            since2 = (dt.date.today() - dt.timedelta(days=730)).strftime("%Y%m%d")
             for c in sorted(cands, key=lambda c: (bool(c["stock_code"]), c["modify_date"]), reverse=True)[:20]:
                 try:
                     info = D.json("company.json", corp_code=c["corp_code"])
+                    lst = D.json("list.json", corp_code=c["corp_code"], bgn_de=since2, page_count=1)
                 except Exception:
                     continue
                 ind = str(info.get("induty_code") or "")
-                score = (ind[:2] in ("41", "42"), bool(c["stock_code"]), c["modify_date"])
+                n = int(lst.get("total_count") or 0) if lst.get("status") == "000" else 0
+                score = (n > 0, ind[:2] in ("41", "42"), n, bool(c["stock_code"]), c["modify_date"])
                 scored.append((score, c))
                 time.sleep(0.1)
             if scored:
                 pick = max(scored, key=lambda x: x[0])[1]
         if pick:
             ids[r.get("reg") or r["name"]] = {"name": r["name"], "corp_code": pick["corp_code"], "dart_name": pick["corp_name"],
-                                              "stock": pick["stock_code"] or None}
+                                              "stock": pick["stock_code"] or None, "cands": len(cands)}
         else:
             miss.append(r["name"])
     return ids, miss
@@ -237,6 +241,73 @@ def financials(D, codes, today):
     return res
 
 
+AUD_RX = re.compile(r"^(?:\[[^\]]*\])?\s*(연결)?감사보고서\s*\((\d{4})\.(\d{2})\)")
+
+
+def audit_fin(D, corp_code, today, cache, log=print):
+    """감사보고서로 최근 5개 사업연도 재무 → (fin, 최신 감사보고서 정보)"""
+    import audit_fs
+    since = (today - dt.timedelta(days=365 * 7)).strftime("%Y%m%d")
+    reps, page = {}, 1
+    while True:
+        d = D.json("list.json", corp_code=corp_code, bgn_de=since, pblntf_ty="F", page_no=page, page_count=100)
+        if d.get("status") != "000":
+            break
+        for x in d.get("list", []):
+            m = AUD_RX.match(re.sub(r"\s+", " ", x.get("report_nm", "")).strip())
+            if not m:
+                continue
+            key = (bool(m.group(1)), int(m.group(2)))
+            if key not in reps or x["rcept_no"] > reps[key]["no"]:  # 정정본이 있으면 나중 것
+                rd = x["rcept_dt"]
+                reps[key] = {"no": x["rcept_no"], "d": f"{rd[:4]}-{rd[4:6]}-{rd[6:8]}", "nm": x["report_nm"].strip(), "y": int(m.group(2)), "c": bool(m.group(1))}
+        if page >= int(d.get("total_page") or 1):
+            break
+        page += 1
+    if not reps:
+        return None, None
+    latest_y = max(y for _, y in reps)
+    cons = (True, latest_y) in reps
+    latest = reps[(cons, latest_y)]
+    want = [latest_y - i for i in range(5)]
+    periods, rcepts = {}, []
+    order = sorted((r for (c, y), r in reps.items() if c == cons), key=lambda r: -r["y"]) + \
+            sorted((r for (c, y), r in reps.items() if c != cons), key=lambda r: -r["y"])
+    for r in order:
+        if all(y in periods for y in want):
+            break
+        if r["y"] not in want and r["y"] - 1 not in want:
+            continue
+        if r["y"] in periods and r["y"] - 1 in periods:
+            continue
+        if r["no"] not in cache:
+            try:
+                cache[r["no"]] = audit_fs.parse(r["no"]) or {}
+            except Exception as e:
+                log(f"감사보고서 읽기 실패 {r['no']}: {e}")
+                continue
+            time.sleep(0.5)
+        x = cache[r["no"]]
+        if not x:
+            continue
+        rcepts.append(r["no"])
+        other = r["c"] != cons
+        for y, vals in ((r["y"], x.get("cur") or {}), (r["y"] - 1, x.get("prev") or {})):
+            if y in want and y not in periods and any(v is not None for v in vals.values()):
+                periods[y] = {"p": f"{y}", "t": "FY", **{k: vals.get(k) for k in ("rev", "op", "ni", "assets", "liab", "equity")},
+                              **({"b": "별도" if cons else "연결"} if other else {})}
+    if not periods:
+        return None, latest
+    ps = [periods[y] for y in sorted(periods, reverse=True)]
+    for p in ps:
+        if p.get("liab") is not None and p.get("equity"):
+            p["dr"] = round(p["liab"] / p["equity"] * 100, 1) if p["equity"] > 0 else None
+        if p.get("op") is not None and p.get("rev"):
+            p["opm"] = round(p["op"] / p["rev"] * 100, 1)
+    return {"basis": "연결" if cons else "별도", "src": "감사보고서", "periods": ps, "rcepts": rcepts,
+            "audit_no": latest["no"], "audit_nm": latest["nm"]}, latest
+
+
 def collect(rows, prev, now, log=print):
     key = os.environ.get("DART_API_KEY", "").strip()
     if not key:
@@ -293,22 +364,27 @@ def collect(rows, prev, now, log=print):
             fin_checked = last
     else:
         fin_checked = last
-    # 구조화 재무가 없는 회사(비상장 외감법인)는 최근 감사보고서 원문 링크를 찾아 둔다(재무 갱신 때만)
+    # 사업·분기보고서를 내지 않는 회사(비상장 외감법인)는 감사보고서 본문에서 재무를 읽는다(재무 갱신 때만).
+    # 한 번 읽은 감사보고서는 접수번호별로 저장해 두고 다시 받지 않는다.
+    afs_cache = dict(prev.get("afs") or {})
     if fin_checked == today.isoformat():
-        since_a = (today - dt.timedelta(days=550)).strftime("%Y%m%d")
+        import audit_fs
         for k, v in co.items():
-            if v.get("fin") or (v.get("audit") and v["audit"]["d"] >= (today - dt.timedelta(days=400)).isoformat()):
+            if v.get("fin") and v["fin"].get("src") != "감사보고서":
                 continue
             try:
-                d = D.json("list.json", corp_code=v["corp_code"], bgn_de=since_a, pblntf_ty="F", page_count=20)
-                for x in d.get("list", []) if d.get("status") == "000" else []:
-                    nm = re.sub(r"\s+", " ", x.get("report_nm", "")).strip()
-                    if "감사보고서" in nm and "정정" not in nm:
-                        rd = x["rcept_dt"]
-                        v["audit"] = {"d": f"{rd[:4]}-{rd[4:6]}-{rd[6:8]}", "no": x["rcept_no"], "nm": nm}
-                        break
+                f, aud = audit_fin(D, v["corp_code"], today, afs_cache, log)
+                if f:
+                    v["fin"] = f
+                elif v.get("fin"):
+                    pass  # 실패하면 직전 값 유지
+                if aud:
+                    v["audit"] = aud
             except Exception as e:
-                errors.append(f"감사보고서 {k}: {str(e)[:40]}")
-            time.sleep(0.1)
+                errors.append(f"감사보고서 {k}: {str(e)[:60]}")
+    else:
+        afs_cache = prev.get("afs") or {}
+    keep = {no for v in co.values() if v.get("fin") for no in v["fin"].get("rcepts", [])}
+    afs_cache = {r: x for r, x in afs_cache.items() if r in keep}
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")
-    return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors}
+    return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors, "afs": afs_cache}
