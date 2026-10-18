@@ -168,7 +168,7 @@ def _nodes(rcept_no):
     return nodes
 
 
-SKIP_NM = re.compile(r"^(합계|합 계|계|총계|총 계|소계|보통주|우선주|주주명|성명|구분|x|X)$")
+SKIP_NM = re.compile(r"^(합계|합 계|계|총계|총 계|소계|보통주|우선주|보퉁주|종류주|주주명|성명|구분|x|X)$")
 
 
 NUMLIKE = re.compile(r"^[\d,.\s]+(주|원|천원|백만원|%)?$")

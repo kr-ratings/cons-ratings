@@ -906,7 +906,7 @@ function overviewHTML(r,dc){
 }
 function holdersHTML(dc){
   const sh=dc&&dc.sh;
-  if(!sh) return `<p class="hint">${DART?"공시된 주주 현황을 찾지 못했습니다.":"준비 중입니다."}</p>`;
+  if(!sh) return `<p class="hint">${DART?"이 회사는 감사보고서와 DART 공시에 주주별 지분 구성을 밝히지 않습니다.":"준비 중입니다."}</p>`;
   const f=v=>v==null?"–":`${v.toFixed(1)}%`;
   const hasRel=sh.list.some(x=>x.rel);
   const rows=sh.list.map(x=>`<tr><td>${esc(x.nm)}</td>${hasRel?`<td class="dim">${esc((x.rel||"").replace(/\n/g," "))}</td>`:""}<td class="n">${f(x.pct)}</td></tr>`).join("");
