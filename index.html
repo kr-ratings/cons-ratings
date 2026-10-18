@@ -853,6 +853,7 @@ function openCo(reg,push=true){
   document.body.style.overflow="hidden";
   if(push) history.replaceState(null,"",`#co=${encodeURIComponent(reg)}`);
   $("#dr-x").focus();
+  const fb=$("#drawer .fin-box"); if(fb) fb.scrollLeft=fb.scrollWidth; // 좁은 화면에서는 최근 연도부터 보이게
   $("#dr-x").addEventListener("click",closeCo);
   $("#dr-star").addEventListener("click",e=>{ WATCH.has(reg)?WATCH.delete(reg):WATCH.add(reg); saveWatch();
     e.currentTarget.setAttribute("aria-pressed",String(WATCH.has(reg))); e.currentTarget.textContent=WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"; renderFeed(); render(); });
