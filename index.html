@@ -485,7 +485,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const getJSON = async p => { try { const r = await fetch(p, {cache:"no-store"}); return r.ok ? r.json() : null; } catch { return null; } };
+const getJSON = async p => { try { const r = await fetch(p, {cache:"no-store"}); return r.ok ? await r.json() : null; } catch { return null; } };
 
 const AG=["KIS","KR","NICE"], AGN={KIS:"한국신용평가",KR:"한국기업평가",NICE:"나이스신용평가"};
 const KINDN={bond:"회사채 신용등급",icr:"기업신용등급(ICR)",cp:"기업어음(CP)"};
