@@ -237,8 +237,14 @@ footer .ct{white-space:nowrap}
 .star[aria-pressed="true"]{color:var(--g-a3)}
 .star:focus-visible{outline:2px solid var(--accent)}
 label.f.watch[aria-disabled="true"]{opacity:.5}
-td.co .cob{overflow:visible;max-width:none;text-overflow:clip}
-@media (max-width:760px){td.co .cob{white-space:normal}}
+td.co .cob{overflow:visible;max-width:none;text-overflow:clip;text-decoration:underline;text-decoration-style:dotted;text-decoration-color:var(--muted);text-underline-offset:3px}
+td.co .cob::after{content:"›";margin-left:4px;color:var(--accent);font-weight:700}
+td.co .cob:hover{text-decoration-style:solid;text-decoration-color:var(--accent)}
+.co-hint{display:flex;align-items:center;gap:8px;background:var(--accent-soft);color:var(--accent);border:1px solid var(--line);border-radius:8px;padding:7px 12px;font-size:.82rem;font-weight:600;margin-bottom:10px}
+.co-hint svg{width:16px;height:16px;flex:none}
+.co-hint span{font-weight:400;color:var(--muted)}
+th.s3 .sub2{font-weight:400;color:var(--accent);margin-left:4px;font-size:.7rem}
+@media (max-width:760px){td.co .cob{white-space:normal}.co-hint{flex-wrap:wrap;row-gap:2px}.co-hint span{flex-basis:100%;margin-left:24px}th.s3 .sub2{display:block;margin-left:0}}
 td.co .wst{color:var(--g-a3);font-size:.8rem;margin-right:3px}
 
 /* ---------- 회사 상세 패널 ---------- */
@@ -372,6 +378,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
     <div class="sec-head">
       <span class="key"><span>등급 옆 날짜는 최근 평가일</span><span class="o"><i>'24.05.23</i> 평가 후 1년 경과</span><span><span class="kd" style="margin:0">ICR</span> <span class="kd" style="margin:0">CP</span> 회사채 등급이 없을 때 대신 표시</span><span><span class="ol pos">긍정적</span> <span class="ol neg">부정적</span> Outlook(안정적은 생략)</span><span>등급을 누르면 평가사 기업 페이지가 열립니다</span></span>
     </div>
+    <div class="co-hint" role="note"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.9v.1"/></svg>회사명을 누르면 시공사별 상세 화면이 열립니다<span>회사 개요 · 주주 현황 · 재무 요약(5개년) · 신용등급 이력 · 최근 공시 · 기사</span></div>
     <div class="filters">
       <div class="seg" role="group" aria-label="순위 구간" id="seg-band">
         <button type="button" data-v="all" aria-pressed="true">전체</button>
@@ -411,7 +418,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
         <thead><tr id="thead">
           <th class="s1" data-k="rank" aria-sort="ascending"><button type="button">순위</button></th>
           <th class="s2" data-k="mv"><button type="button">전년 대비</button></th>
-          <th class="s3" data-k="name"><button type="button">회사명</button></th>
+          <th class="s3" data-k="name"><button type="button">회사명</button><span class="sub2">누르면 상세 ›</span></th>
           <th class="num" data-k="amount"><button type="button">시공능력 평가액(억원)</button></th>
           <th data-k="best"><button type="button">최고등급</button></th>
           <th class="ag1" data-k="KIS" title="한국신용평가"><button type="button">KIS 한신평</button></th>
