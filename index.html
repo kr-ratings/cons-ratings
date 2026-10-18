@@ -384,6 +384,32 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
     <div class="spreads" id="spreads"></div>
   </section>
 
+  <section aria-labelledby="h-feed">
+    <div class="sec-head">
+      <h2 id="h-feed">최근 변동 · 상위 100개사</h2>
+      <span class="note">신용등급 평가 · DART 주요 공시 · 관련 기사 · 공사비지수 발표를 날짜순으로 모았습니다. 회사명을 누르면 상세가 열립니다</span>
+    </div>
+    <div class="feed">
+      <div class="fbar">
+        <div class="seg" role="group" aria-label="기간" id="fseg-win">
+          <button type="button" data-v="1" aria-pressed="false">오늘</button>
+          <button type="button" data-v="7" aria-pressed="true">7일</button>
+          <button type="button" data-v="30" aria-pressed="false">30일</button>
+          <button type="button" data-v="90" aria-pressed="false">90일</button>
+        </div>
+        <div class="seg" role="group" aria-label="종류" id="fseg-type">
+          <button type="button" data-v="all" aria-pressed="true">전체</button>
+          <button type="button" data-v="rating" aria-pressed="false">신용등급</button>
+          <button type="button" data-v="disc" aria-pressed="false">공시</button>
+          <button type="button" data-v="news" aria-pressed="false">기사</button>
+        </div>
+        <label class="f watch" for="f-watch" title="회사 상세에서 ☆를 눌러 관심 회사를 정하면 그 회사만 볼 수 있습니다(이 브라우저에만 저장)"><input type="checkbox" id="f-watch"> 관심 회사만</label>
+        <span class="ftail" id="feed-tail"></span>
+      </div>
+      <div id="feed-list"><div class="fempty">불러오는 중…</div></div>
+    </div>
+  </section>
+
   <section aria-labelledby="h-tbl">
     <div class="sec-head">
       <h2 id="h-tbl">시공능력평가 순위 · 회사채 등급</h2>
@@ -441,32 +467,6 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
         </tr></thead>
         <tbody id="tbody"><tr><td colspan="8" class="empty">불러오는 중…</td></tr></tbody>
       </table>
-    </div>
-  </section>
-
-  <section aria-labelledby="h-feed">
-    <div class="sec-head">
-      <h2 id="h-feed">최근 변동 · 상위 100개사</h2>
-      <span class="note">신용등급 평가 · DART 주요 공시 · 관련 기사 · 공사비지수 발표를 날짜순으로 모았습니다. 회사명을 누르면 상세가 열립니다</span>
-    </div>
-    <div class="feed">
-      <div class="fbar">
-        <div class="seg" role="group" aria-label="기간" id="fseg-win">
-          <button type="button" data-v="1" aria-pressed="false">오늘</button>
-          <button type="button" data-v="7" aria-pressed="true">7일</button>
-          <button type="button" data-v="30" aria-pressed="false">30일</button>
-          <button type="button" data-v="90" aria-pressed="false">90일</button>
-        </div>
-        <div class="seg" role="group" aria-label="종류" id="fseg-type">
-          <button type="button" data-v="all" aria-pressed="true">전체</button>
-          <button type="button" data-v="rating" aria-pressed="false">신용등급</button>
-          <button type="button" data-v="disc" aria-pressed="false">공시</button>
-          <button type="button" data-v="news" aria-pressed="false">기사</button>
-        </div>
-        <label class="f watch" for="f-watch" title="회사 상세에서 ☆를 눌러 관심 회사를 정하면 그 회사만 볼 수 있습니다(이 브라우저에만 저장)"><input type="checkbox" id="f-watch"> 관심 회사만</label>
-        <span class="ftail" id="feed-tail"></span>
-      </div>
-      <div id="feed-list"><div class="fempty">불러오는 중…</div></div>
     </div>
   </section>
 
