@@ -301,6 +301,20 @@ table.mini td.sum{font-weight:600}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);font-size:.82rem;padding:8px 14px;border-radius:8px;z-index:30}
 
 /* ---------- 공사비 지표 ---------- */
+.cfold{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.cfold > summary{list-style:none;cursor:pointer;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 14px;padding:12px 16px}
+.cfold > summary::-webkit-details-marker{display:none}
+.cfold > summary:hover{background:var(--accent-soft);border-radius:10px}
+.cfold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+.cf-t{font-weight:600;font-size:.92rem}
+.cf-v{font-size:.82rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.cf-v b{font-family:var(--f-mono);font-weight:500;color:var(--fg)}
+.cf-more{margin-left:auto;font-size:.8rem;font-weight:600;color:var(--accent);white-space:nowrap}
+.cf-more i{font-style:normal;display:inline-block;transition:transform .15s}
+.cfold[open] .cf-more i{transform:rotate(180deg)}
+.cfold .c,.cfold[open] .o{display:none}.cfold[open] .c{display:inline}
+.cfold[open] > summary{border-bottom:1px solid var(--line);border-radius:10px 10px 0 0}
+.cfold .cost{border:0;border-radius:0 0 10px 10px}
 .cost{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);background:var(--surface);border:1px solid var(--line);border-radius:10px}
 .cost .ck{padding:16px 18px;display:flex;flex-direction:column;gap:12px;border-right:1px solid var(--line)}
 .cost .ck .num{font-family:var(--f-mono);font-size:1.9rem;font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
@@ -461,6 +475,8 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
       <h2 id="h-cost">공사비 지표</h2>
       <span class="note">한국건설기술연구원 건설공사비지수(2020년 = 100) · 매월 갱신</span>
     </div>
+    <details class="cfold" id="cost-fold">
+    <summary><span class="cf-t">건설공사비지수</span><span class="cf-v" id="cost-sum">불러오는 중…</span><span class="cf-more"><span class="o">펼쳐 보기</span><span class="c">접기</span> <i aria-hidden="true">▾</i></span></summary>
     <div class="cost" id="cost">
       <div class="ck" id="cost-k"><div class="placeholder" style="padding:0">불러오는 중…</div></div>
       <div class="cc">
@@ -477,6 +493,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
         <details class="tbl"><summary>표로 보기 · 최근 13개월</summary><div id="cost-tbl"></div></details>
       </div>
     </div>
+    </details>
   </section>
 
   <details class="info">
@@ -978,6 +995,7 @@ function renderCost(){
   const ch=(a,b)=>a!=null&&b!=null?((a/b-1)*100):null;
   const sg=v=>v==null?"–":`${v>0?"+":""}${v.toFixed(1)}%`;
   const mom=ch(L[1],at(ym(L[0],0,-1))), yoy=ch(L[1],at(ym(L[0],-1))), y3=ch(L[1],at(ym(L[0],-3)));
+  $("#cost-sum").innerHTML=`${L[0].replace("-","년 ")}월${c.provisional?"(잠정)":""} <b>${L[1].toFixed(2)}</b> · 전년 동월 대비 <b>${sg(yoy)}</b> · 3년 전 대비 <b>${sg(y3)}</b>`;
   $("#cost-k").innerHTML=`<div><div class="dim" style="font-size:.78rem">건설공사비지수 · ${L[0].replace("-","년 ")}월${c.provisional?" (잠정)":""}</div>
       <div class="num">${L[1].toFixed(2)}<small>2020년 = 100</small></div></div>
     <div class="kv"><span>전월 대비</span><b>${sg(mom)}</b><span>전년 동월 대비</span><b>${sg(yoy)}</b><span>3년 전 대비</span><b>${sg(y3)}</b>
@@ -1033,6 +1051,7 @@ function drawCost(){
   $("#cost-tbl").innerHTML=`<table class="mini"><thead><tr><th>월</th>${CSER.map(([k])=>`<th class="n">${k}</th>`).join("")}</tr></thead><tbody>${last.map(mm=>`<tr><td>${mm.replace("-",".")}</td>${CSER.map(([k])=>{const v=(c.series[k]||[]).find(p=>p[0]===mm);return `<td class="n">${v?v[1].toFixed(2):"–"}</td>`;}).join("")}</tr>`).join("")}</tbody></table>`;
 }
 function bindCost(){
+  $("#cost-fold").addEventListener("toggle",e=>{ if(e.target.open&&COST&&COST.cci) drawCost(); });
   document.querySelectorAll("#cseg button").forEach(b=>b.addEventListener("click",()=>{
     document.querySelectorAll("#cseg button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
     CRANGE=+b.dataset.v; drawCost(); }));
@@ -1041,6 +1060,7 @@ function bindCost(){
 
 // ---------- 공통 바인딩 ----------
 document.addEventListener("click",e=>{
+  const ca=e.target.closest('a[href="#cost"]'); if(ca){ e.preventDefault(); const f=$("#cost-fold"); f.open=true; f.scrollIntoView({behavior:"smooth",block:"start"}); return; }
   const b=e.target.closest(".cob"); if(b&&b.dataset.reg){ e.preventDefault(); openCo(b.dataset.reg); }
 });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#drawer").hidden) closeCo(); });
