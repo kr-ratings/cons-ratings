@@ -171,6 +171,9 @@ def _nodes(rcept_no):
 SKIP_NM = re.compile(r"^(합계|합 계|계|총계|총 계|소계|보통주|우선주|주주명|성명|구분|x|X)$")
 
 
+NUMLIKE = re.compile(r"^[\d,.\s]+(주|원|천원|백만원|%)?$")
+
+
 def _holders_from_table(t):
     rows = t.find_all("tr")
     if len(rows) < 2 or len(rows) > 60:
@@ -178,22 +181,28 @@ def _holders_from_table(t):
     head = " ".join(_sp(c.get_text(" ")) for tr in rows[:2] for c in tr.find_all(["th", "td"]))
     if not (re.search(r"주주|성명", head) and re.search(r"지분|비율|%", head)):
         return None
-    if re.search(r"종속|관계기업|회사명|투자", head) and not re.search(r"주주", head):
+    if re.search(r"종속|관계기업|회사명|투자|보증", head) and not re.search(r"주주", head):
         return None
     out = []
     for tr in rows:
         cells = [re.sub(r"\s+", " ", c.get_text(" ", strip=True)) for c in tr.find_all(["td", "th"])]
-        nums = [(i, _num(c.replace("%", ""))) for i, c in enumerate(cells)]
-        pct = next(((i, v) for i, v in reversed(nums) if v is not None and 0 < v <= 100 and ("%" in cells[i] or "." in cells[i] or v == 100)), None)
-        if not pct:
-            continue
-        names = [c for c in cells[:pct[0]] if c and _num(c.replace("%", "")) is None and not SKIP_NM.match(_sp(c))]
+        names = [(i, c) for i, c in enumerate(cells) if c and not NUMLIKE.match(c) and not SKIP_NM.match(_sp(c)) and c != '"']
         if not names:
             continue
-        nm = names[-1]
-        if re.search(r"합계|총계|소계", _sp(nm)):
+        ni, nm = names[0]
+        if re.search(r"합계|총계|소계|^계$", _sp(nm)):
             continue
-        out.append({"nm": nm, "pct": round(pct[1], 2)})
+        # 이름 다음에서 처음 나오는 지분율(100 이하, % 또는 소수점) = 당기말 지분율
+        pct = None
+        for c in cells[ni + 1:]:
+            v = _num(c.replace("%", "").replace("주", ""))
+            if v is not None and 0 <= v <= 100 and ("%" in c or "." in c or v == 100) and "주" not in c:
+                pct = v
+                break
+        if pct is None:
+            continue
+        rel = next((c for c in reversed(cells[ni + 1:]) if c and not NUMLIKE.match(c) and c not in ("-", '"') and not SKIP_NM.match(_sp(c))), None)
+        out.append({"nm": nm, "pct": round(pct, 2), **({"rel": rel} if rel and len(rel) <= 12 else {})})
     tot = sum(x["pct"] for x in out)
     if out and 95 <= tot <= 100.5:
         return out
@@ -214,7 +223,7 @@ def shareholders(rcept_no):
         r = _get(f"{VIEW}/report/viewer.do", params={"rcpNo": rcept_no, "dcmNo": node["dcmNo"], "eleId": node["eleId"],
                                                       "offset": node["offset"], "length": node["length"], "dtd": node["dtd"]})
         soup = BeautifulSoup(r.content, "html.parser")
-        for t in soup.find_all("table")[:40]:  # 주주 현황은 주석 앞부분(회사의 개요)에 있다
+        for t in soup.find_all("table"):
             h = _holders_from_table(t)
             if h:
                 return sorted(h, key=lambda x: -x["pct"])
