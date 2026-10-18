@@ -34,6 +34,19 @@ ACCT = {"매출액": "rev", "영업이익": "op", "당기순이익": "ni", "자�
 REPRT = [("11011", "FY"), ("11014", "3Q"), ("11012", "1H"), ("11013", "1Q")]
 
 
+def acct_key(nm):
+    n = re.sub(r"\s", "", nm or "")
+    if n in ("자산총계", "부채총계", "자본총계"):
+        return {"자산총계": "assets", "부채총계": "liab", "자본총계": "equity"}[n]
+    if re.match(r"^(매출액|수익\(매출액\)|영업수익|매출$)", n):
+        return "rev"
+    if re.match(r"^영업(이익|손실|손익)", n):
+        return "op"
+    if re.match(r"^(연결)?당기순(이익|손실|손익)", n):
+        return "ni"
+    return None
+
+
 def classify(nm):
     if SKIP.search(nm):
         return None
@@ -105,7 +118,7 @@ def map_ids(D, rows, ids):
             pick = cands[0]
         elif cands:
             scored = []
-            # 같은 이름이 여럿이면: 최근 2년 공시가 있는(살아 있는) 회사 → 건설업 → 공시 건수 많은 순
+            # 같은 이름이 여럿이면 아래 score 순으로 고른다
             since2 = (dt.date.today() - dt.timedelta(days=730)).strftime("%Y%m%d")
             for c in sorted(cands, key=lambda c: (bool(c["stock_code"]), c["modify_date"]), reverse=True)[:20]:
                 try:
@@ -115,7 +128,10 @@ def map_ids(D, rows, ids):
                     continue
                 ind = str(info.get("induty_code") or "")
                 n = int(lst.get("total_count") or 0) if lst.get("status") == "000" else 0
-                score = (n > 0, ind[:2] in ("41", "42"), n, bool(c["stock_code"]), c["modify_date"])
+                region = (r.get("region") or "")[:2]
+                same_region = bool(region) and str(info.get("adres") or "").replace("특별시", "").replace("광역시", "")[:2] == region
+                # 살아 있는 회사 → 시평 소재지(시도)와 본점 주소 일치 → 공시 건수 많은 순 → 건설업
+                score = (n > 0, same_region, n, ind[:2] in ("41", "42"), bool(c["stock_code"]), c["modify_date"])
                 scored.append((score, c))
                 time.sleep(0.1)
             if scored:
@@ -177,7 +193,7 @@ def financials(D, codes, today):
             xs = [x for x in xs if x.get("fs_div") == fs]
             cur, prv, pp = {}, {}, {}
             for x in xs:
-                k = ACCT.get(x.get("account_nm", "").strip())
+                k = acct_key(x.get("account_nm", ""))
                 if not k or k in cur:
                     continue
                 # 분기·반기 손익은 thstrm_amount 가 3개월치라서 누적(thstrm_add_amount)을 쓴다
@@ -242,60 +258,79 @@ def financials(D, codes, today):
 
 
 AUD_RX = re.compile(r"^(?:\[[^\]]*\])?\s*(연결)?감사보고서\s*\((\d{4})\.(\d{2})\)")
+BIZ_RX = re.compile(r"^(?:\[[^\]]*\])?\s*사업보고서\s*\((\d{4})\.(\d{2})\)")
 
 
-def audit_fin(D, corp_code, today, cache, log=print):
-    """감사보고서로 최근 5개 사업연도 재무 → (fin, 최신 감사보고서 정보)"""
-    import audit_fs
-    since = (today - dt.timedelta(days=365 * 7)).strftime("%Y%m%d")
-    reps, page = {}, 1
+def _reports(D, corp_code, since, ty, rx, kind):
+    out, page = {}, 1
     while True:
-        d = D.json("list.json", corp_code=corp_code, bgn_de=since, pblntf_ty="F", page_no=page, page_count=100)
+        d = D.json("list.json", corp_code=corp_code, bgn_de=since, pblntf_ty=ty, page_no=page, page_count=100)
         if d.get("status") != "000":
             break
         for x in d.get("list", []):
-            m = AUD_RX.match(re.sub(r"\s+", " ", x.get("report_nm", "")).strip())
+            m = rx.match(re.sub(r"\s+", " ", x.get("report_nm", "")).strip())
             if not m:
                 continue
-            key = (bool(m.group(1)), int(m.group(2)))
-            if key not in reps or x["rcept_no"] > reps[key]["no"]:  # 정정본이 있으면 나중 것
+            c = bool(m.group(1)) if kind == "audit" else None
+            y = int(m.group(2 if kind == "audit" else 1))
+            key = (kind, c, y)
+            if key not in out or x["rcept_no"] > out[key]["no"]:  # 정정본이 있으면 나중 것
                 rd = x["rcept_dt"]
-                reps[key] = {"no": x["rcept_no"], "d": f"{rd[:4]}-{rd[4:6]}-{rd[6:8]}", "nm": x["report_nm"].strip(), "y": int(m.group(2)), "c": bool(m.group(1))}
+                out[key] = {"no": x["rcept_no"], "d": f"{rd[:4]}-{rd[4:6]}-{rd[6:8]}", "nm": x["report_nm"].strip(), "y": y, "c": c, "kind": kind}
         if page >= int(d.get("total_page") or 1):
             break
         page += 1
+    return out
+
+
+def audit_fin(D, corp_code, today, cache, log=print):
+    """구조화 재무가 없는 회사: 감사보고서(없으면 사업보고서) 원문에서 최근 5개 사업연도 → (fin, 최신 감사보고서)"""
+    import audit_fs
+    since = (today - dt.timedelta(days=365 * 7)).strftime("%Y%m%d")
+    reps = _reports(D, corp_code, since, "F", AUD_RX, "audit")
+    reps.update(_reports(D, corp_code, since, "A", BIZ_RX, "biz"))
     if not reps:
         return None, None
-    latest_y = max(y for _, y in reps)
-    cons = (True, latest_y) in reps
-    latest = reps[(cons, latest_y)]
+    latest_y = max(r["y"] for r in reps.values())
+    cons = ("audit", True, latest_y) in reps or not any(r["kind"] == "audit" and r["y"] == latest_y for r in reps.values())
+    auds = [r for r in reps.values() if r["kind"] == "audit"]
+    latest = max(auds, key=lambda r: (r["y"], r["c"] == cons, r["no"])) if auds else None
     want = [latest_y - i for i in range(5)]
-    periods, rcepts = {}, []
-    order = sorted((r for (c, y), r in reps.items() if c == cons), key=lambda r: -r["y"]) + \
-            sorted((r for (c, y), r in reps.items() if c != cons), key=lambda r: -r["y"])
+    # 같은 기준(연결/별도) 감사보고서 → 사업보고서 → 다른 기준 감사보고서, 각각 최신 연도부터
+    order = sorted([r for r in reps.values() if r["kind"] == "audit" and r["c"] == cons], key=lambda r: -r["y"]) + \
+            sorted([r for r in reps.values() if r["kind"] == "biz"], key=lambda r: -r["y"]) + \
+            sorted([r for r in reps.values() if r["kind"] == "audit" and r["c"] != cons], key=lambda r: -r["y"])
+    periods, partial, rcepts = {}, {}, []
+    full = lambda v: v.get("assets") is not None and (v.get("rev") is not None or v.get("op") is not None)
     for r in order:
         if all(y in periods for y in want):
             break
-        if r["y"] not in want and r["y"] - 1 not in want:
+        if not any(r["y"] - i in want and r["y"] - i not in periods for i in range(3)):
             continue
-        if r["y"] in periods and r["y"] - 1 in periods:
-            continue
-        if r["no"] not in cache:
+        x = cache.get(r["no"])
+        if not x or x.get("v") != audit_fs.VERSION:
             try:
-                cache[r["no"]] = audit_fs.parse(r["no"]) or {}
+                x = cache[r["no"]] = audit_fs.parse(r["no"], prefer_cons=cons) or {"v": audit_fs.VERSION}
             except Exception as e:
-                log(f"감사보고서 읽기 실패 {r['no']}: {e}")
+                log(f"재무제표 읽기 실패 {r['no']}: {e}")
                 continue
             time.sleep(0.5)
-        x = cache[r["no"]]
-        if not x:
-            continue
-        rcepts.append(r["no"])
-        other = r["c"] != cons
-        for y, vals in ((r["y"], x.get("cur") or {}), (r["y"] - 1, x.get("prev") or {})):
-            if y in want and y not in periods and any(v is not None for v in vals.values()):
-                periods[y] = {"p": f"{y}", "t": "FY", **{k: vals.get(k) for k in ("rev", "op", "ni", "assets", "liab", "equity")},
-                              **({"b": "별도" if cons else "연결"} if other else {})}
+        used = False
+        for i, vals in enumerate(x.get("periods") or []):
+            y = r["y"] - i
+            if y not in want or y in periods:
+                continue
+            ent = {"p": f"{y}", "t": "FY", **{k: vals.get(k) for k in ("rev", "op", "ni", "assets", "liab", "equity")}}
+            if x.get("consolidated") != cons:
+                ent["b"] = "연결" if x.get("consolidated") else "별도"
+            if full(vals):
+                periods[y] = ent; used = True
+            elif vals.get("assets") is not None and y not in partial:
+                partial[y] = ent; used = True
+        if used:
+            rcepts.append(r["no"])
+    for y, ent in partial.items():  # 끝까지 손익을 못 찾은 연도는 있는 숫자라도
+        periods.setdefault(y, ent)
     if not periods:
         return None, latest
     ps = [periods[y] for y in sorted(periods, reverse=True)]
@@ -304,8 +339,9 @@ def audit_fin(D, corp_code, today, cache, log=print):
             p["dr"] = round(p["liab"] / p["equity"] * 100, 1) if p["equity"] > 0 else None
         if p.get("op") is not None and p.get("rev"):
             p["opm"] = round(p["op"] / p["rev"] * 100, 1)
-    return {"basis": "연결" if cons else "별도", "src": "감사보고서", "periods": ps, "rcepts": rcepts,
-            "audit_no": latest["no"], "audit_nm": latest["nm"]}, latest
+    src = latest or max(reps.values(), key=lambda r: r["y"])
+    return {"basis": "연결" if cons else "별도", "src": "감사보고서" if latest else "사업보고서 원문", "periods": ps, "rcepts": rcepts,
+            "audit_no": src["no"], "audit_nm": src["nm"]}, latest
 
 
 def collect(rows, prev, now, log=print):
@@ -370,7 +406,7 @@ def collect(rows, prev, now, log=print):
     if fin_checked == today.isoformat():
         import audit_fs
         for k, v in co.items():
-            if v.get("fin") and v["fin"].get("src") != "감사보고서":
+            if v.get("fin") and v["fin"].get("src") not in ("감사보고서", "사업보고서 원문"):
                 continue
             try:
                 f, aud = audit_fin(D, v["corp_code"], today, afs_cache, log)

@@ -892,8 +892,8 @@ function coHTML(r){
   let fin;
   if(ps.length){
     const rowsF=[["매출액","rev",won],["영업이익","op",won],["영업이익률","opm",pctS],["당기순이익","ni",won],["자산총계","assets",won],["부채총계","liab",won],["자본총계","equity",won],["부채비율","dr",pctS]];
-    fin=`<div class="fin-box"><table class="mini"><thead><tr><th>${f.basis} · 억원</th>${ps.map(p=>`<th class="n">${p.t==="FY"?p.p:p.p.replace(" ","<br>")}${p.b?`<br><span class="dim" style="font-weight:400">${p.b}</span>`:""}</th>`).join("")}</tr></thead><tbody>${rowsF.map(([lb,k,fm])=>`<tr><td>${lb}</td>${ps.map(p=>`<td class="n">${fm(p[k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>${f.src==="감사보고서"
-      ?`<p class="hint" style="margin-top:6px">감사보고서 기준입니다(비상장 외부감사 대상 회사라 반기·분기 실적은 공시되지 않습니다). 최근 원문: <a href="${dartUrl(f.audit_no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(f.audit_nm||"감사보고서")}</a>. 부채비율 = 부채총계 ÷ 자본총계.</p>`
+    fin=`<div class="fin-box"><table class="mini"><thead><tr><th>${f.basis} · 억원</th>${ps.map(p=>`<th class="n">${p.t==="FY"?p.p:p.p.replace(" ","<br>")}${p.b?`<br><span class="dim" style="font-weight:400">${p.b}</span>`:""}</th>`).join("")}</tr></thead><tbody>${rowsF.map(([lb,k,fm])=>`<tr><td>${lb}</td>${ps.map(p=>`<td class="n">${fm(p[k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>${f.src==="감사보고서"||f.src==="사업보고서 원문"
+      ?`<p class="hint" style="margin-top:6px">${f.src==="감사보고서"?"감사보고서":"사업보고서"} 원문의 재무제표에서 읽은 숫자입니다${f.src==="감사보고서"?"(비상장 외부감사 대상 회사라 반기·분기 실적은 공시되지 않습니다)":""}. 최근 원문: <a href="${dartUrl(f.audit_no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(f.audit_nm||"원문")}</a>.${ps.some(p=>p.b)?" 연도 아래 '연결'·'별도' 표시는 그해만 기준이 다른 경우입니다.":""} 부채비율 = 부채총계 ÷ 자본총계.</p>`
       :'<p class="hint" style="margin-top:6px">분기 열은 올해 누적 실적과 분기말 재무상태입니다. 부채비율 = 부채총계 ÷ 자본총계.</p>'}`;
   } else if(!DART){
     fin='<p class="hint">재무·공시 데이터는 준비 중입니다.</p>';
