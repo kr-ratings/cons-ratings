@@ -202,9 +202,13 @@ def financials(D, codes, today):
                 pp[k] = _amt(x.get("bfefrmtrm_amount"))
             ent = res.setdefault(cc, {"basis": "연결" if fs == "CFS" else "별도", "periods": []})
             if label == "FY":
-                have = {p["p"] for p in ent["periods"]}
+                have = {p["p"]: p for p in ent["periods"]}
                 for y, vals in ((bsns_year, cur), (bsns_year - 1, prv), (bsns_year - 2, pp)):
-                    if f"{y}" not in have and any(v is not None for v in vals.values()):
+                    if f"{y}" in have:  # 이미 있는 연도는 빈 항목만 다른 보고서 값으로 채운다
+                        for k, v in vals.items():
+                            if have[f"{y}"].get(k) is None and v is not None:
+                                have[f"{y}"][k] = v
+                    elif any(v is not None for v in vals.values()):
                         ent["periods"].append({"p": f"{y}", "t": "FY", **vals})
                 ent.setdefault("fy_rcept", xs[0].get("rcept_no") if xs else None)
             else:
@@ -227,7 +231,8 @@ def financials(D, codes, today):
                 latest.update({c: y for c in got})
                 pending -= got
         # 5개 사업연도: 사업보고서 한 건에 3개년이 들어 있으므로 2년 전(없으면 1년·3년 전) 사업보고서로 나머지를 채운다
-        nfy = lambda c: sum(1 for p in res.get(c, {}).get("periods", []) if p["t"] == "FY")
+        nfy = lambda c: sum(1 for p in res.get(c, {}).get("periods", []) if p["t"] == "FY"
+                            and all(p.get(k) is not None for k in ("rev", "op", "ni", "assets", "liab", "equity")))
         for off in (2, 1, 3):
             for y in sorted(set(latest.values())):
                 cs = sorted(c for c, v in latest.items() if v == y and nfy(c) < 5)
@@ -247,6 +252,12 @@ def financials(D, codes, today):
                 take(lst, year, label)
                 pending -= {x["corp_code"] for x in lst}
     for ent in res.values():
+        for p in ent["periods"]:  # 자산 = 부채 + 자본 으로 빠진 한 항목 보완
+            a, l, e = p.get("assets"), p.get("liab"), p.get("equity")
+            if e is None and a is not None and l is not None:
+                p["equity"] = a - l
+            elif l is None and a is not None and e is not None:
+                p["liab"] = a - e
         fy = sorted((p for p in ent["periods"] if p["t"] == "FY"), key=lambda p: p["p"], reverse=True)[:5]
         ent["periods"] = [p for p in ent["periods"] if p["t"] != "FY"] + fy
         for p in ent["periods"]:
