@@ -90,15 +90,22 @@ def map_ids(D, rows, ids):
     by = {}
     for c in allc:
         by.setdefault(_norm(c["corp_name"]), []).append(c)
+    names = json.loads((Path(__file__).resolve().parent / "news_names.json").read_text("utf-8"))
     miss = []
     for r in need:
-        cands = by.get(_norm(r["name"]), [])
+        # 시평 엑셀의 한글 표기(지에스건설)와 DART 표기(GS건설)가 다른 경우가 많아 기사 검색용 이름도 후보로 쓴다
+        keys = [_norm(r["name"])] + [_norm(q) for q in (names.get(_norm(r["name"])) or {}).get("q", [])]
+        cands, seen = [], set()
+        for k in keys:
+            for c in by.get(k, []):
+                if c["corp_code"] not in seen:
+                    seen.add(c["corp_code"]); cands.append(c)
         pick = None
         if len(cands) == 1:
             pick = cands[0]
         elif cands:
             scored = []
-            for c in cands:
+            for c in sorted(cands, key=lambda c: (bool(c["stock_code"]), c["modify_date"]), reverse=True)[:20]:
                 try:
                     info = D.json("company.json", corp_code=c["corp_code"])
                 except Exception:

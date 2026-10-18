@@ -3,7 +3,12 @@ name: 수집 및 배포
 on:
   schedule:
     - cron: "50 22 * * *"   # 매일 07:50 KST 시작 → 8시 전후 갱신 (전날 22:50 UTC). 정각은 GitHub 대기열이 몰려 지연되므로 10분 앞당김
-  workflow_dispatch: {}     # Actions 탭에서 'Run workflow'로 즉시 실행
+  workflow_dispatch:        # Actions 탭에서 'Run workflow'로 즉시 실행
+    inputs:
+      only:
+        description: "dart = DART 공시·재무만 다시 받기 (비우면 전체 수집)"
+        required: false
+        default: ""
   push:
     branches: [main]
     paths: ["index.html", "data/**", ".github/workflows/**"]
@@ -35,7 +40,7 @@ jobs:
         if: github.event_name != 'push'
         run: |
           pip install requests beautifulsoup4 openpyxl
-          python collector/collect.py
+          if [ "${{ github.event.inputs.only }}" = "dart" ]; then python collector/dart_run.py; else python collector/collect.py; fi
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}   # Open DART 인증키(없으면 공시·재무만 건너뜀)
           ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}   # 한국은행 ECOS 인증키(없으면 공개 샘플 키로 최근 10개월씩 갱신)
