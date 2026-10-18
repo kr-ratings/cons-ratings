@@ -38,6 +38,7 @@ jobs:
           python collector/collect.py
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}   # Open DART 인증키(없으면 공시·재무만 건너뜀)
+          ECOS_API_KEY: ${{ secrets.ECOS_API_KEY }}   # 한국은행 ECOS 인증키(없으면 공개 샘플 키로 최근 10개월씩 갱신)
 
       - name: 수집 결과 커밋
         if: github.event_name != 'push'

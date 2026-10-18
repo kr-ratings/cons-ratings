@@ -313,6 +313,21 @@ table.mini tr:last-child td{border-bottom:0}
 .cnote{font-size:.74rem;color:var(--muted);margin:0}
 .cnote a{color:var(--accent);text-decoration:none}
 details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
+.mats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:12px}
+.mat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.mat .hd{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.mat .hd b{font-weight:600;font-size:.88rem}
+.mat .hd span{font-size:.7rem;color:var(--muted);font-family:var(--f-mono)}
+.mat .v{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.mat .v .num{font-family:var(--f-mono);font-size:1.35rem;font-weight:500;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.mat .v .chg{font-size:.78rem}
+.spark{width:100%;height:46px;display:block;overflow:visible}
+.spark path{fill:none;stroke:var(--c1);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.spark .ar{fill:var(--spark-fill);stroke:none}
+.spark circle{fill:var(--c1);stroke:var(--surface);stroke-width:2}
+.mat table.mini{margin-top:2px}
+@media (max-width:1100px){.mats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:760px){.mats{grid-template-columns:1fr}}
 @media (max-width:760px){
   .fd{grid-template-columns:auto minmax(0,1fr) auto;row-gap:2px;padding:8px 12px}
   .fd .tt{grid-column:1/-1}
@@ -443,7 +458,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
   <section aria-labelledby="h-cost" id="cost-sec">
     <div class="sec-head">
       <h2 id="h-cost">공사비 지표</h2>
-      <span class="note">한국건설기술연구원 건설공사비지수(2020년 = 100) · 매월 갱신</span>
+      <span class="note">건설공사비지수(한국건설기술연구원) · 자재 생산자물가지수(한국은행) · 시중노임단가(대한건설협회)</span>
     </div>
     <div class="cost" id="cost">
       <div class="ck" id="cost-k"><div class="placeholder" style="padding:0">불러오는 중…</div></div>
@@ -460,6 +475,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
         <details class="tbl"><summary>표로 보기 · 최근 13개월</summary><div id="cost-tbl"></div></details>
       </div>
     </div>
+    <div class="mats" id="mats"></div>
   </section>
 
   <details class="info">
@@ -468,12 +484,12 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
     <p>순위와 평가액은 대한건설협회가 공시한 엑셀의 토목건축공사업(토건) 기준이며, 평가액에 마우스를 올리면 항목별 평가액이 보입니다. 전년 순위는 건설업 등록번호로 맞추므로 사명이 바뀐 회사도 이어집니다.</p>
     <p>등급은 각 평가사 기업 페이지의 현재 회사채 신용등급과 Outlook, 평가일입니다. 회사채 등급이 없는 회사는 기업신용등급(ICR)을, 그것도 없으면 기업어음(CP) 등급을 표시하고 ICR · CP 표시를 붙입니다. 회사채만 보려면 필터의 '회사채만'을 누르세요. 평가사가 등급을 내지 않았거나 유효기간이 끝난 경우 – 로 표시합니다. 최고등급은 3사 중 가장 높은 등급이며, 평가일이 1년을 넘은 등급은 날짜를 주황색으로 표시하니 평가사 원문에서 한 번 더 확인하시기 바랍니다.</p>
     <p>최근 변동은 평가사 3사의 등급 평가(상향·하향·전망 변경·유지), DART 주요 공시(수주·채무보증·자금조달·지배구조·리스크 관련, 정기보고서), 회사 이름이 제목에 나온 기사 중 리스크·신용·실적·수주·지배구조 주제만 골라 보여 줍니다. 기사는 구글 뉴스 검색 결과의 제목·출처·링크만 싣고, 같은 내용을 여러 매체가 쓴 경우 하나로 묶습니다. 회사명을 누르면 등급 이력, DART 재무 요약(최근 3개 사업연도와 올해 최신 분기), 최근 공시·기사를 한 화면에서 보고 심사요청서용 요약을 복사할 수 있습니다. ☆ 관심 회사는 이 브라우저에만 저장됩니다.</p>
-    <p>공사비 지표는 한국건설기술연구원이 매월 말 발표하는 건설공사비지수(2020년 = 100)입니다. 발표 엑셀에 2000년부터의 전 기간이 들어 있어 과거 수정치도 함께 반영됩니다.</p>
+    <p>공사비 지표는 한국건설기술연구원이 매월 말 발표하는 건설공사비지수(2020년 = 100)입니다. 발표 엑셀에 2000년부터의 전 기간이 들어 있어 과거 수정치도 함께 반영됩니다. 자재는 한국은행 생산자물가지수(기본분류) 중 철근및봉강 · 레미콘 · 시멘트이고, 노임단가는 대한건설협회가 매년 1월 · 9월 공표하는 건설업 임금실태조사 보고서의 직종별 일급입니다.</p>
     <p>매일 오전(08:00)에 원 출처에서 시공능력평가와 등급을 다시 받아 갱신합니다. 시공능력평가는 매년 7월 말 새 공시가 올라오면 다음 날 아침에 반영됩니다.</p>
   </details>
 
   <footer>
-    <p>출처: 대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE), 금융감독원 전자공시시스템(DART), 한국건설기술연구원 건설공사비지수, 구글 뉴스(기사 제목·링크). 이 화면은 공개된 자료를 모아 정리한 개인 참고용 자료이며, 정리 과정에서 지연·누락·오기가 생길 수 있고 원문과 다를 수 있습니다.</p>
+    <p>출처: 대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE), 금융감독원 전자공시시스템(DART), 한국건설기술연구원 건설공사비지수, 한국은행 생산자물가지수, 대한건설협회 시중노임단가, 구글 뉴스(기사 제목·링크). 이 화면은 공개된 자료를 모아 정리한 개인 참고용 자료이며, 정리 과정에서 지연·누락·오기가 생길 수 있고 원문과 다를 수 있습니다.</p>
     <p>이 화면의 어떤 내용도 투자 권유나 여신·의사결정의 근거가 아니며, 이를 이용해 생긴 결과에 대해 작성자는 책임지지 않습니다. 정확한 내용은 각 기관의 원문 공시에서 확인하시기 바랍니다.</p>
     <p>함께 운영하는 대시보드: <a href="https://abs.namepf.com/" target="_blank" rel="noopener">유동화시장 등급 · 금리 현황</a> · <a href="https://apt.namepf.com/" target="_blank" rel="noopener">아파트 수급 · 분양시장 현황</a> · <a href="https://dc.namepf.com/" target="_blank" rel="noopener">데이터센터 개발 현황</a></p>
     <p class="contact">기획 · 운영: 한국투자증권 PF그룹 부동산금융1부 최이름 차장 <a class="sister" href="https://namepf.com/" target="_blank" rel="noopener" style="display:inline-block;margin:0 4px;text-decoration:none;white-space:nowrap"><span class="sl">바로가기:</span> → 주요 딜 수행 실적</a> <span class="ct">(<a href="mailto:name@koreainvestment.com">name@koreainvestment.com</a>, <a href="tel:02-3276-6012">02-3276-6012</a>)</span></p>
@@ -811,6 +827,10 @@ function feedItems(){
     const s=COST.cci.series["건설 전체"]||[], L=s[s.length-1], Y=s.find(x=>x[0]===`${+L[0].slice(0,4)-1}${L[0].slice(4)}`);
     items.push({d:COST.cci.posted,t:"cost",pri:1,html:`${L[0].replace("-","년 ")}월 건설공사비지수 ${L[1].toFixed(2)}${Y?` · 전년 동월 대비 ${((L[1]/Y[1]-1)*100).toFixed(1)}%`:""}${COST.cci.provisional?'<span class="sm">잠정</span>':""}`,url:"#cost",tag:"공사비",meta:"한국건설기술연구원"});
   }
+  if(COST&&COST.wage&&COST.wage.periods&&COST.wage.periods[0]>=since){
+    const w=COST.wage, b=(w.wages["보통인부"]||[])[0];
+    items.push({d:w.periods[0],t:"cost",pri:1,html:`${esc(w.title)}${b?` · 보통인부 ${b.toLocaleString("ko-KR")}원`:""}`,url:w.url,tag:"공사비",meta:"대한건설협회"});
+  }
   return items.filter(x=>(FEED.type==="all"||x.t===FEED.type||(FEED.type==="rating"&&x.t==="sys")||(FEED.type==="news"&&x.t==="cost"))&&(!FEED.watch||(x.reg&&WATCH.has(x.reg))))
     .sort((a,b)=>a.d!==b.d?(a.d<b.d?1:-1):a.pri-b.pri||((b.tm||"")>(a.tm||"")?1:-1));
 }
@@ -939,6 +959,7 @@ function renderCost(){
   const ch=(a,b)=>a!=null&&b!=null?((a/b-1)*100):null;
   const sg=v=>v==null?"–":`${v>0?"+":""}${v.toFixed(1)}%`;
   const mom=ch(L[1],at(ym(L[0],0,-1))), yoy=ch(L[1],at(ym(L[0],-1))), y3=ch(L[1],at(ym(L[0],-3)));
+  renderMats();
   $("#cost-k").innerHTML=`<div><div class="dim" style="font-size:.78rem">건설공사비지수 · ${L[0].replace("-","년 ")}월${c.provisional?" (잠정)":""}</div>
       <div class="num">${L[1].toFixed(2)}<small>2020년 = 100</small></div></div>
     <div class="kv"><span>전월 대비</span><b>${sg(mom)}</b><span>전년 동월 대비</span><b>${sg(yoy)}</b><span>3년 전 대비</span><b>${sg(y3)}</b>
@@ -984,6 +1005,38 @@ function drawCost(){
   // 표로 보기(최근 13개월)
   const last=xs.slice(-13).reverse();
   $("#cost-tbl").innerHTML=`<table class="mini"><thead><tr><th>월</th>${CSER.map(([k])=>`<th class="n">${k}</th>`).join("")}</tr></thead><tbody>${last.map(mm=>`<tr><td>${mm.replace("-",".")}</td>${CSER.map(([k])=>{const v=(c.series[k]||[]).find(p=>p[0]===mm);return `<td class="n">${v?v[1].toFixed(2):"–"}</td>`;}).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function sparkSVG(pts,id){
+  const W=240,H=46,lo=Math.min(...pts.map(p=>p[1])),hi=Math.max(...pts.map(p=>p[1]));
+  const X=i=>i/(pts.length-1)*W, Y=v=>H-4-(v-lo)/((hi-lo)||1)*(H-10);
+  const d=pts.map((p,i)=>`${i?"L":"M"}${X(i).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("");
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" data-id="${id}" role="img" aria-label="최근 ${pts.length}개월 추이"><path class="ar" d="${d}L${W},${H}L0,${H}Z"/><path d="${d}"/><circle cx="${X(pts.length-1)}" cy="${Y(pts[pts.length-1][1])}" r="3.5"/></svg>`;
+}
+function renderMats(){
+  const box=$("#mats"), P=COST&&COST.ppi&&COST.ppi.series, Wg=COST&&COST.wage; let html="";
+  const sg=v=>v==null?"–":`${v>0?"+":""}${v.toFixed(1)}%`;
+  if(P) for(const [k,s] of Object.entries(P)){
+    const L=s[s.length-1], ym=L[0], y1=s.find(x=>x[0]===`${+ym.slice(0,4)-1}${ym.slice(4)}`), yoy=y1?(L[1]/y1[1]-1)*100:null;
+    const pts=s.slice(-36);
+    html+=`<div class="mat" data-k="${esc(k)}"><div class="hd"><b>${esc(k)}</b><span class="hv">${ym.replace("-",".")}</span></div>
+      <div class="v"><span class="num">${L[1].toFixed(1)}</span><span class="chg flat"><span class="lb">전년 동월 대비</span>${sg(yoy)}</span></div>
+      ${sparkSVG(pts,k)}<p class="cnote">생산자물가지수 · 2020년 = 100 · 최근 3년</p></div>`;
+  }
+  if(Wg&&Wg.wages){
+    const ps=Wg.periods||[], f=d=>d?`${d.slice(2,4)}.${+d.slice(5,7)}`:"";
+    html+=`<div class="mat"><div class="hd"><b>시중노임단가</b><span>원/일</span></div>
+      <table class="mini"><thead><tr><th>직종</th>${ps.slice(0,3).map(p=>`<th class="n">'${f(p)}</th>`).join("")}<th class="n">전년비</th></tr></thead><tbody>
+      ${Object.entries(Wg.wages).map(([k,v])=>`<tr><td>${esc(k)}</td>${v.slice(0,3).map(x=>`<td class="n">${x!=null?x.toLocaleString("ko-KR"):"–"}</td>`).join("")}<td class="n">${v[0]&&v[2]?sg((v[0]/v[2]-1)*100):"–"}</td></tr>`).join("")}</tbody></table>
+      <p class="cnote"><a href="${esc(Wg.url)}" target="_blank" rel="noopener">대한건설협회 임금실태조사 보고서 →</a></p></div>`;
+  }
+  box.innerHTML=html; box.hidden=!html;
+  box.querySelectorAll(".mat[data-k]").forEach(card=>{
+    const s=P[card.dataset.k].slice(-36), svg=card.querySelector("svg"), hv=card.querySelector(".hv"), num=card.querySelector(".num"), L=s[s.length-1];
+    const show=ev=>{ const r=svg.getBoundingClientRect(), x=((ev.touches?ev.touches[0].clientX:ev.clientX)-r.left)/r.width;
+      const i=Math.max(0,Math.min(s.length-1,Math.round(x*(s.length-1)))); hv.textContent=s[i][0].replace("-","."); num.textContent=s[i][1].toFixed(1); };
+    const reset=()=>{ hv.textContent=L[0].replace("-","."); num.textContent=L[1].toFixed(1); };
+    svg.addEventListener("mousemove",show); svg.addEventListener("touchmove",show,{passive:true}); svg.addEventListener("mouseleave",reset); svg.addEventListener("touchend",reset);
+  });
 }
 function bindCost(){
   document.querySelectorAll("#cseg button").forEach(b=>b.addEventListener("click",()=>{
