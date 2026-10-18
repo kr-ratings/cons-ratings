@@ -783,7 +783,7 @@ function actionText(a){
 const dirMark=d=>d==="up"?'<span class="dir up">▲상향</span> ':d==="down"?'<span class="dir down">▼하향</span> ':"";
 
 // ---------- 피드 ----------
-let FEED={win:7,type:"all",watch:false,shown:10};
+let FEED={win:7,type:"all",watch:false,shown:5};
 function feedItems(){
   const since=addDays(todayS(),-FEED.win+1), items=[];
   for(const r of ROWS){
@@ -839,9 +839,9 @@ function renderFeed(){
 function bindFeed(){
   const seg=(id,key,num)=>document.querySelectorAll(`#${id} button`).forEach(b=>b.addEventListener("click",()=>{
     document.querySelectorAll(`#${id} button`).forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
-    FEED[key]=num?+b.dataset.v:b.dataset.v; FEED.shown=10; renderFeed(); }));
+    FEED[key]=num?+b.dataset.v:b.dataset.v; FEED.shown=5; renderFeed(); }));
   seg("fseg-win","win",true); seg("fseg-type","type",false);
-  $("#f-watch").addEventListener("change",e=>{FEED.watch=e.target.checked;FEED.shown=10;renderFeed();});
+  $("#f-watch").addEventListener("change",e=>{FEED.watch=e.target.checked;FEED.shown=5;renderFeed();});
 }
 
 // ---------- 회사 상세 ----------
