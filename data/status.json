@@ -1,5 +1,5 @@
 {
- "generated": "2026-10-18 08:01",
+ "generated": "2026-10-18 15:30",
  "sources": {
   "대한건설협회": {
    "ok": true,
@@ -13,6 +13,12 @@
    "ok": true
   },
   "NICE": {
+   "ok": true
+  },
+  "기사": {
+   "ok": true
+  },
+  "공사비지수": {
    "ok": true
   }
  }

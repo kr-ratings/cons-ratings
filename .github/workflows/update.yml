@@ -36,13 +36,15 @@ jobs:
         run: |
           pip install requests beautifulsoup4 openpyxl
           python collector/collect.py
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}   # Open DART 인증키(없으면 공시·재무만 건너뜀)
 
       - name: 수집 결과 커밋
         if: github.event_name != 'push'
         run: |
           git config user.name "cons-ratings-bot"
           git config user.email "cons-ratings-bot@users.noreply.github.com"
-          git add data/
+          git add data/ collector/dart_ids.json 2>/dev/null || git add data/
           if git diff --cached --quiet; then
             echo "변경 없음"
           else
@@ -56,6 +58,7 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp -r data _site/
+          cp og.png robots.txt sitemap.xml _site/ 2>/dev/null || true
 
       # GitHub Pages 배포. Cloudflare Pages만 쓰는 경우를 대비해 실패해도 넘어간다.
       - uses: actions/configure-pages@v5

@@ -154,13 +154,19 @@ def kis(code):
             elif lab == "평가일":
                 ent["date"] = ymd(val)
         found[k] = ent
-    return _finish(found)
+    return _finish(found), []
 
 
 def kr(code):
     html = get(URL["KR"].format(code)).text
     m = re.search(r"mySheet9\.LoadSearchData\('(\{\"Data\":.*?\})'\)", html)  # 주요 등급
     rows = json.loads(m.group(1))["Data"] if m else []
+    hist = []
+    m1 = re.search(r"mySheet1\.LoadSearchData\('(\{\"Data\":.*?\})'\)", html)  # 회사채 회차별 등급 이력
+    for b in (json.loads(m1.group(1))["Data"] if m1 else []):
+        if b.get("GUAR_DVCD") not in (None, "0") or not b.get("GRD"):
+            continue  # 보증 회사채 제외
+        hist.append([ymd(b.get("EVAL_DT")), b["GRD"], b.get("OL_NM"), "bond", b.get("EVAL_DIV_NM")])
     found, keys = {}, {}
     for r in rows:
         k = _kind(r.get("EVAL_TRGT_NM_ORG") or r.get("EVAL_TRGT_NM") or "")
@@ -170,7 +176,53 @@ def kr(code):
         key = (r.get("GUAR_DVCD") in (None, "0"), d or "")  # 무보증 우선, 그다음 최신
         if k not in found or key > keys[k]:
             found[k], keys[k] = {"grade": r["GRD"], "outlook": r.get("OL_NM"), "date": d}, key
-    return _finish(found)
+    return _finish(found), _dedupe(hist)
+
+
+NICE_SEC = {"채권": "bond", "기업신용평가": "icr", "기업어음": "cp"}
+
+
+def _nice_hist(soup):
+    """NICE 기업 페이지의 '채권 · 기업어음 · 기업신용평가' 목록 표 → [[평가일, 등급, Outlook, 종류, 평정]]"""
+    hist = []
+    for t in soup.find_all("table"):
+        cap = t.find("caption")
+        if not cap or "목록" not in cap.get_text():
+            continue
+        s, label = t, None
+        for _ in range(6):
+            s = s.find_previous(string=True)
+            while s is not None and not s.strip():
+                s = s.find_previous(string=True)
+            if s is not None and s.strip() in NICE_SEC:
+                label = NICE_SEC[s.strip()]
+                break
+        if not label:
+            continue
+        for tr in t.find_all("tr"):
+            c = [x.get_text(" ", strip=True) for x in tr.find_all("td")]
+            if label == "bond" and len(c) >= 7 and c[1].startswith("선순위"):
+                hist.append([ymd(c[6]), c[4], c[5] or None, "bond", c[3]])
+            elif label == "icr" and len(c) >= 4 and ymd(c[3]):
+                hist.append([ymd(c[3]), c[1], c[2] or None, "icr", c[0]])
+            elif label == "cp" and len(c) >= 3 and ymd(c[2]):
+                hist.append([ymd(c[2]), c[1], None, "cp", c[0]])
+    return hist
+
+
+def _dedupe(hist):
+    """같은 날 같은 종류는 하나만, 최신순, 종류별 최근 15건"""
+    seen, out = set(), []
+    for h in sorted((h for h in hist if h[0] and h[1]), key=lambda h: h[0], reverse=True):
+        k = (h[0], h[3])
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(h)
+    by = {}
+    for h in out:
+        by.setdefault(h[3], []).append(h)
+    return [h for k in ("bond", "icr", "cp") for h in by.get(k, [])[:15]]
 
 
 def nice(code):
@@ -188,10 +240,71 @@ def nice(code):
             if k and k not in found:
                 found[k] = {"grade": c[6], "outlook": c[7] or None, "date": ymd(c[8])}
         break
-    return _finish(found)
+    return _finish(found), _dedupe(_nice_hist(soup))
 
 
 SCRAPE = {"KIS": kis, "KR": kr, "NICE": nice}
+
+
+# ---------------------------------------------------------------- 변동 기록 · 기사 · 공사비 · DART
+def _load(name, default):
+    p = DATA / name
+    try:
+        return json.loads(p.read_text("utf-8")) if p.exists() else default
+    except Exception:
+        return default
+
+
+def _save(name, obj):
+    (DATA / name).write_text(json.dumps(obj, ensure_ascii=False, separators=(",", ":")), "utf-8")
+
+
+def extras(prev, cur, status, now, failed):
+    today = now.strftime("%Y-%m-%d")
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    import events, news, cost, dart
+
+    # 1) 등급 · Outlook · 시평 변동 (직전 수집과 비교)
+    try:
+        ev = events.diff(prev, cur, today, failed) if prev.get("rows") else []
+        old = _load("events.json", {}).get("events", [])
+        _save("events.json", {"generated": now.strftime("%Y-%m-%d %H:%M"), "events": events.merge(old, ev, today)})
+        print(f"변동 {len(ev)}건")
+    except Exception as e:
+        print("변동 기록 실패:", e, file=sys.stderr)
+
+    # 2) 기사
+    try:
+        old = _load("news.json", {}).get("items", [])
+        items, nf = news.collect(cur["rows"], old, get, log=lambda m: print(m, file=sys.stderr))
+        _save("news.json", {"generated": now.strftime("%Y-%m-%d %H:%M"), "items": items})
+        status["sources"]["기사"] = {"ok": nf == 0, **({"error": f"검색 {nf}건 실패"} if nf else {})}
+        print(f"기사 {len(items)}건")
+    except Exception as e:
+        status["sources"]["기사"] = {"ok": False, "error": str(e)[:200]}
+        print("기사 수집 실패:", e, file=sys.stderr)
+
+    # 3) 공사비 지표
+    c = _load("cost.json", {})
+    for k, fn in cost.SOURCES.items():
+        try:
+            c[k] = fn()
+            status["sources"][cost.LABEL[k]] = {"ok": True}
+        except Exception as e:
+            status["sources"][cost.LABEL[k]] = {"ok": False, "error": str(e)[:200]}
+            print(f"{k} 수집 실패(직전 값 유지):", e, file=sys.stderr)
+    c["generated"] = now.strftime("%Y-%m-%d %H:%M")
+    _save("cost.json", c)
+
+    # 4) DART 공시 · 재무 (DART_API_KEY 가 있을 때만)
+    try:
+        res = dart.collect(cur["rows"], _load("dart.json", {}), now, log=lambda m: print(m, file=sys.stderr))
+        if res is not None:
+            _save("dart.json", res)
+            status["sources"]["DART"] = {"ok": not res.get("errors"), **({"error": "; ".join(res["errors"])[:200]} if res.get("errors") else {})}
+    except Exception as e:
+        status["sources"]["DART"] = {"ok": False, "error": str(e)[:200]}
+        print("DART 수집 실패:", e, file=sys.stderr)
 
 
 # ---------------------------------------------------------------- main
@@ -231,6 +344,9 @@ def main():
     # 2) 신용평가 3사
     fail = {a: 0 for a in SCRAPE}
     unmapped = []
+    hist_path = DATA / "history.json"
+    H_old = json.loads(hist_path.read_text("utf-8")) if hist_path.exists() else {}
+    H = {}
     ids_by_reg = {v["reg"]: v for v in ids.values() if v.get("reg")}
     for r in cur:
         key = norm(r["name"])
@@ -246,7 +362,9 @@ def main():
                 continue
             ent = {"url": URL[a].format(code)}
             try:
-                got = fn(code)
+                got, hist = fn(code)
+                if a != "KIS":
+                    H.setdefault(r.get("reg") or key, {})[a] = hist
                 # 대표 등급: 회사채(선순위) → 기업신용등급(ICR) → 기업어음(CP) 순
                 kind = next((k for k in ("bond", "icr", "cp") if k in got), None)
                 if kind:
@@ -265,6 +383,22 @@ def main():
     if unmapped:
         status["unmapped"] = unmapped
 
+    # 등급 이력: NICE·KR은 평가사 페이지의 이력 표, KIS는 매일 본 현재 등급을 쌓는다. 실패한 평가사는 직전 이력 유지
+    for r in cur:
+        k = r.get("reg") or norm(r["name"])
+        h, old_h = H.setdefault(k, {}), H_old.get(k, {})
+        for a in ("KR", "NICE"):
+            if a not in h and old_h.get(a):
+                h[a] = old_h[a]
+        kis_h = [list(x) for x in old_h.get("KIS", [])]
+        x = r["ratings"].get("KIS") or {}
+        if x.get("grade") and x.get("date") and not any(e[0] == x["date"] and e[3] == (x.get("kind") or "bond") for e in kis_h):
+            kis_h.insert(0, [x["date"], x["grade"], x.get("outlook"), x.get("kind") or "bond", None])
+        if kis_h:
+            h["KIS"] = sorted(kis_h, key=lambda e: e[0], reverse=True)[:15]
+        H[k] = {a: v for a, v in h.items() if v}
+    hist_path.write_text(json.dumps({k: v for k, v in H.items() if v}, ensure_ascii=False, separators=(",", ":")), "utf-8")
+
     dates = [x["date"] for r in cur for x in r["ratings"].values() if x.get("date")]
     out = {
         "year": year,
@@ -273,6 +407,7 @@ def main():
         "rows": cur,
     }
     prev_path.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), "utf-8")
+    extras(prev, out, status, now, [a for a in SCRAPE if fail[a]])
     (DATA / "status.json").write_text(json.dumps(status, ensure_ascii=False, indent=1), "utf-8")
     print(f"{year}년 시평 {len(cur)}개사 · 등급 {sum(len([x for x in r['ratings'].values() if x.get('grade')]) for r in cur)}건 · "
           f"실패 {fail} · 미매핑 {len(unmapped)}")

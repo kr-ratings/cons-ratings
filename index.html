@@ -200,6 +200,133 @@ footer .ct{white-space:nowrap}
 @media (max-width:760px){footer .ct{display:block;margin-top:6px}footer .contact .sister{margin:4px 0 0 !important}}
 .sisters{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 @media (max-width:760px){.sisters{justify-content:flex-start}}
+/* ---------- 최근 변동 피드 ---------- */
+:root{--c1:#2747a8;--c2:#00897b;--c3:#c4621a}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--c1:#6f8ae8;--c2:#21a397;--c3:#d07232}}
+:root[data-theme="dark"]{--c1:#6f8ae8;--c2:#21a397;--c3:#d07232}
+.feed{background:var(--surface);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.fbar{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line)}
+.fbar .seg button{padding:5px 9px;font-size:.8rem}
+.fbar .ftail{margin-left:auto;font-size:.78rem;color:var(--muted)}
+.fbar .ftail b{font-family:var(--f-mono);color:var(--fg);font-weight:500}
+.fday{font-size:.72rem;font-weight:600;color:var(--muted);padding:9px 14px 3px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.fday:first-child{padding-top:10px}
+.fd{display:grid;grid-template-columns:76px minmax(0,10em) minmax(0,1fr) auto;column-gap:12px;align-items:baseline;padding:6px 14px;font-size:.84rem}
+.fd + .fd{border-top:1px dashed var(--line)}
+.fd:hover{background:var(--accent-soft)}
+.tag{font-size:.68rem;font-weight:600;padding:1px 6px;border-radius:4px;white-space:nowrap;justify-self:start;border:1px solid transparent;line-height:1.5}
+.tag.t-rating{background:var(--accent-soft);color:var(--accent)}
+.tag.t-disc{background:var(--pf-bg);color:var(--pf)}
+.tag.t-news{color:var(--muted);border-color:var(--line)}
+.tag.t-cost{color:var(--c2);border-color:currentColor}
+.tag.t-sys{color:var(--muted);border-color:var(--line)}
+.cob{all:unset;cursor:pointer;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.cob:hover{color:var(--accent);text-decoration:underline}
+.cob:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:2px}
+.fd .tt{color:inherit;text-decoration:none;min-width:0}
+.fd a.tt:hover{color:var(--accent);text-decoration:underline}
+.fd .tt .sm{color:var(--muted);font-size:.76rem;margin-left:6px}
+.fd .mt{font-size:.74rem;color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
+.dir{font-family:var(--f-mono);font-size:.78rem;font-weight:600}
+.dir.up{color:var(--up)} .dir.down{color:var(--down)}
+.fmore{all:unset;display:block;width:100%;box-sizing:border-box;text-align:center;padding:9px;font-size:.8rem;color:var(--accent);cursor:pointer;border-top:1px solid var(--line);font-weight:600}
+.fmore:hover{background:var(--accent-soft)}
+.fmore:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.fempty{padding:22px 14px;color:var(--muted);font-size:.84rem;text-align:center}
+.star{all:unset;cursor:pointer;color:var(--muted);font-size:1rem;line-height:1;padding:2px 4px;border-radius:4px}
+.star[aria-pressed="true"]{color:var(--g-a3)}
+.star:focus-visible{outline:2px solid var(--accent)}
+label.f.watch[aria-disabled="true"]{opacity:.5}
+td.co .cob{overflow:visible;max-width:none;text-overflow:clip}
+@media (max-width:760px){td.co .cob{white-space:normal}}
+td.co .wst{color:var(--g-a3);font-size:.8rem;margin-right:3px}
+
+/* ---------- 회사 상세 패널 ---------- */
+.ov{position:fixed;inset:0;background:rgba(10,14,22,.38);z-index:20}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(600px,100vw);background:var(--bg);border-left:1px solid var(--line);z-index:21;overflow:auto;box-shadow:-10px 0 28px rgba(0,0,0,.16);display:flex;flex-direction:column}
+.drawer[hidden],.ov[hidden]{display:none}
+.dr-h{position:sticky;top:0;background:var(--surface);border-bottom:1px solid var(--line);padding:14px 18px 12px;display:flex;gap:10px;align-items:flex-start;z-index:2}
+.dr-h .ttl{flex:1;min-width:0}
+.dr-h h2{all:unset;display:block;font-size:1.15rem;font-weight:700;letter-spacing:-.01em;color:var(--fg)}
+.dr-h .meta{font-size:.78rem;color:var(--muted);margin-top:3px;display:flex;flex-wrap:wrap;gap:2px 10px}
+.dr-h .meta b{font-family:var(--f-mono);font-weight:500;color:var(--fg)}
+.xbtn{all:unset;cursor:pointer;font-size:1.3rem;line-height:1;color:var(--muted);padding:4px 6px;border-radius:6px}
+.xbtn:hover{background:var(--accent-soft);color:var(--fg)}
+.xbtn:focus-visible{outline:2px solid var(--accent)}
+.dr-b{padding:14px 18px 32px;display:flex;flex-direction:column;gap:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.card h3{font-size:.74rem;font-weight:600;letter-spacing:.08em;color:var(--muted);margin:0 0 8px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.card h3 a,.card h3 span{letter-spacing:0;font-weight:500}
+.card h3 a{color:var(--accent);text-decoration:none} .card h3 a:hover{text-decoration:underline}
+.acts{display:flex;flex-wrap:wrap;gap:6px}
+.acts .dl{font-size:.78rem;padding:5px 10px}
+.parts{display:grid;grid-template-columns:auto 1fr auto;gap:5px 10px;align-items:center;font-size:.8rem}
+.parts .pb{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+.parts .pb i{display:block;height:100%;background:var(--spark);opacity:.75}
+.parts .pv{font-family:var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.rnow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.rnow > div{border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+.rnow .ag{font-size:.72rem;color:var(--muted)}
+.rnow .gv{display:flex;align-items:baseline;gap:4px;flex-wrap:wrap;margin-top:2px}
+.rnow .gv .grade{font-size:1.05rem}
+.rnow .dt{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+table.mini{width:100%;border-collapse:collapse;font-size:.8rem;margin-top:10px}
+table.mini th,table.mini td{padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap;text-align:left;position:static;width:auto}
+table.mini th{font-size:.7rem;color:var(--muted);font-weight:600;background:none}
+table.mini td.n,table.mini th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+table.mini tr:last-child td{border-bottom:0}
+.fin-box{overflow-x:auto}
+.lst{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.lst li{display:grid;grid-template-columns:52px auto minmax(0,1fr);gap:8px;align-items:baseline;padding:5px 0;font-size:.8rem;border-top:1px dashed var(--line)}
+.lst li:first-child{border-top:0}
+.lst .d{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.lst a{color:inherit;text-decoration:none} .lst a:hover{color:var(--accent);text-decoration:underline}
+.lst .src{color:var(--muted);font-size:.72rem;margin-left:4px}
+.hint{font-size:.76rem;color:var(--muted);margin:0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--fg);color:var(--bg);font-size:.82rem;padding:8px 14px;border-radius:8px;z-index:30}
+
+/* ---------- 공사비 지표 ---------- */
+.cost{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.cost .ck{padding:16px 18px;display:flex;flex-direction:column;gap:12px;border-right:1px solid var(--line)}
+.cost .ck .num{font-family:var(--f-mono);font-size:1.9rem;font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.cost .ck .num small{font-family:var(--f-sans);font-size:.8rem;color:var(--muted);margin-left:4px;letter-spacing:0}
+.cost .kv{display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:.8rem;align-items:baseline}
+.cost .kv span{color:var(--muted)}
+.cost .kv b{font-family:var(--f-mono);font-weight:500;text-align:right;font-variant-numeric:tabular-nums}
+.cost .cc{padding:12px 16px 10px;min-width:0;display:flex;flex-direction:column;gap:8px}
+.cbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.clegend{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:.76rem;color:var(--muted)}
+.clegend span{display:inline-flex;align-items:center;gap:5px}
+.clegend i{width:14px;height:2px;border-radius:1px;display:inline-block}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .gl{stroke:var(--line);stroke-width:1}
+.chart .ax{font-size:11px;fill:var(--muted);font-family:var(--f-mono)}
+.chart .ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.chart .ref{stroke:var(--muted);stroke-dasharray:3 3;stroke-width:1}
+.chart .xh{stroke:var(--muted);stroke-width:1}
+.chart .lab{font-size:11px;font-family:var(--f-sans);fill:var(--fg)}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.12);padding:7px 10px;font-size:.76rem;white-space:nowrap;z-index:3}
+.tip b{font-family:var(--f-mono);font-weight:500}
+.tip .r{display:flex;align-items:center;gap:6px}
+.tip i{width:10px;height:2px;display:inline-block}
+.cnote{font-size:.74rem;color:var(--muted);margin:0}
+.cnote a{color:var(--accent);text-decoration:none}
+details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
+@media (max-width:760px){
+  .fd{grid-template-columns:auto minmax(0,1fr) auto;row-gap:2px;padding:8px 12px}
+  .fd .tt{grid-column:1/-1}
+  .fd .mt{grid-row:1;grid-column:3}
+  .fd .tag{grid-column:1}
+  .fbar .ftail{margin-left:0;width:100%}
+  .cost{grid-template-columns:1fr}
+  .cost .ck{border-right:0;border-bottom:1px solid var(--line)}
+  .rnow{gap:6px}
+  .rnow > div{padding:7px 8px}
+  .rnow .ag{font-size:.68rem}
+  .rnow .dt{font-size:.66rem}
+  .dr-b{padding:12px 12px 32px}
+}
 </style>
 </head>
 <body>
@@ -207,7 +334,7 @@ footer .ct{white-space:nowrap}
   <header>
     <div>
       <h1>시공사 시공능력평가 · 신용등급 현황 대시보드</h1>
-      <p class="sub">대한건설협회 시공능력평가(도급순위) 상위 100개사와 신용평가 3사 회사채 신용등급 · 매일 오전(08:00) 자동 갱신</p>
+      <p class="sub">대한건설협회 시공능력평가(도급순위) 상위 100개사와 신용평가 3사 회사채 신용등급 · 등급 변동 · DART 공시 · 기사 · 공사비지수 · 매일 오전(08:00) 자동 갱신</p>
     </div>
     <div class="hright">
       <div class="sisters">
@@ -218,6 +345,32 @@ footer .ct{white-space:nowrap}
       <div class="updated" id="updated">데이터 불러오는 중…</div>
     </div>
   </header>
+
+  <section aria-labelledby="h-feed">
+    <div class="sec-head">
+      <h2 id="h-feed">최근 변동 · 상위 100개사</h2>
+      <span class="note">신용등급 평가 · DART 주요 공시 · 관련 기사 · 공사비지수 발표를 날짜순으로 모았습니다. 회사명을 누르면 상세가 열립니다</span>
+    </div>
+    <div class="feed">
+      <div class="fbar">
+        <div class="seg" role="group" aria-label="기간" id="fseg-win">
+          <button type="button" data-v="1" aria-pressed="false">오늘</button>
+          <button type="button" data-v="7" aria-pressed="true">7일</button>
+          <button type="button" data-v="30" aria-pressed="false">30일</button>
+          <button type="button" data-v="90" aria-pressed="false">90일</button>
+        </div>
+        <div class="seg" role="group" aria-label="종류" id="fseg-type">
+          <button type="button" data-v="all" aria-pressed="true">전체</button>
+          <button type="button" data-v="rating" aria-pressed="false">신용등급</button>
+          <button type="button" data-v="disc" aria-pressed="false">공시</button>
+          <button type="button" data-v="news" aria-pressed="false">기사</button>
+        </div>
+        <label class="f watch" for="f-watch" title="회사 상세에서 ☆를 눌러 관심 회사를 정하면 그 회사만 볼 수 있습니다(이 브라우저에만 저장)"><input type="checkbox" id="f-watch"> 관심 회사만</label>
+        <span class="ftail" id="feed-tail"></span>
+      </div>
+      <div id="feed-list"><div class="fempty">불러오는 중…</div></div>
+    </div>
+  </section>
 
   <section aria-labelledby="h-sum">
     <div class="sec-head">
@@ -265,6 +418,7 @@ footer .ct{white-space:nowrap}
         <select id="f-agency"><option value="all">전체</option><option value="KIS">KIS</option><option value="KR">KR</option><option value="NICE">NICE</option></select>
       </label>
       <label class="f" for="f-fresh"><input type="checkbox" id="f-fresh"> 1년 내 평가만</label>
+      <label class="f" for="f-wonly" title="회사 상세에서 ☆를 눌러 정한 관심 회사만 봅니다(이 브라우저에만 저장)"><input type="checkbox" id="f-wonly"> 관심 회사만</label>
       <label class="f search" for="f-q"><input type="search" id="f-q" placeholder="회사명 검색"></label>
       <div class="tail"><span class="count" id="count"></span>
       <button type="button" class="dl" id="dl" title="지금 표에 보이는 필터·정렬 그대로 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀 다운로드</button></div>
@@ -286,21 +440,47 @@ footer .ct{white-space:nowrap}
     </div>
   </section>
 
+  <section aria-labelledby="h-cost" id="cost-sec">
+    <div class="sec-head">
+      <h2 id="h-cost">공사비 지표</h2>
+      <span class="note">한국건설기술연구원 건설공사비지수(2020년 = 100) · 매월 갱신</span>
+    </div>
+    <div class="cost" id="cost">
+      <div class="ck" id="cost-k"><div class="placeholder" style="padding:0">불러오는 중…</div></div>
+      <div class="cc">
+        <div class="cbar">
+          <div class="clegend"><span><i style="background:var(--c1)"></i>건설 전체</span><span><i style="background:var(--c2)"></i>건축</span><span><i style="background:var(--c3)"></i>토목</span></div>
+          <div class="seg" role="group" aria-label="기간" id="cseg">
+            <button type="button" data-v="36" aria-pressed="false">3년</button>
+            <button type="button" data-v="60" aria-pressed="true">5년</button>
+            <button type="button" data-v="999" aria-pressed="false">2015년~</button>
+          </div>
+        </div>
+        <div class="chart" id="cost-chart"></div>
+        <details class="tbl"><summary>표로 보기 · 최근 13개월</summary><div id="cost-tbl"></div></details>
+      </div>
+    </div>
+  </section>
+
   <details class="info">
     <summary>시공능력평가와 이 표를 읽는 법</summary>
     <p>시공능력평가는 대한건설협회가 매년 7월 말 공시하는 건설사별 1건 공사 수행 능력의 금액 평가입니다. 공사실적평가액, 경영평가액, 기술능력평가액, 신인도평가액을 합산하며 발주처의 입찰참가 자격 제한과 업계 순위(도급순위)의 기준으로 쓰입니다.</p>
     <p>순위와 평가액은 대한건설협회가 공시한 엑셀의 토목건축공사업(토건) 기준이며, 평가액에 마우스를 올리면 항목별 평가액이 보입니다. 전년 순위는 건설업 등록번호로 맞추므로 사명이 바뀐 회사도 이어집니다.</p>
     <p>등급은 각 평가사 기업 페이지의 현재 회사채 신용등급과 Outlook, 평가일입니다. 회사채 등급이 없는 회사는 기업신용등급(ICR)을, 그것도 없으면 기업어음(CP) 등급을 표시하고 ICR · CP 표시를 붙입니다. 회사채만 보려면 필터의 '회사채만'을 누르세요. 평가사가 등급을 내지 않았거나 유효기간이 끝난 경우 – 로 표시합니다. 최고등급은 3사 중 가장 높은 등급이며, 평가일이 1년을 넘은 등급은 날짜를 주황색으로 표시하니 평가사 원문에서 한 번 더 확인하시기 바랍니다.</p>
+    <p>최근 변동은 평가사 3사의 등급 평가(상향·하향·전망 변경·유지), DART 주요 공시(수주·채무보증·자금조달·지배구조·리스크 관련, 정기보고서), 회사 이름이 제목에 나온 기사 중 리스크·신용·실적·수주·지배구조 주제만 골라 보여 줍니다. 기사는 구글 뉴스 검색 결과의 제목·출처·링크만 싣고, 같은 내용을 여러 매체가 쓴 경우 하나로 묶습니다. 회사명을 누르면 등급 이력, DART 재무 요약(최근 3개 사업연도와 올해 최신 분기), 최근 공시·기사를 한 화면에서 보고 심사요청서용 요약을 복사할 수 있습니다. ☆ 관심 회사는 이 브라우저에만 저장됩니다.</p>
+    <p>공사비 지표는 한국건설기술연구원이 매월 말 발표하는 건설공사비지수(2020년 = 100)입니다. 발표 엑셀에 2000년부터의 전 기간이 들어 있어 과거 수정치도 함께 반영됩니다.</p>
     <p>매일 오전(08:00)에 원 출처에서 시공능력평가와 등급을 다시 받아 갱신합니다. 시공능력평가는 매년 7월 말 새 공시가 올라오면 다음 날 아침에 반영됩니다.</p>
   </details>
 
   <footer>
-    <p>출처: 대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE). 이 화면은 공개된 자료를 모아 정리한 개인 참고용 자료이며, 정리 과정에서 지연·누락·오기가 생길 수 있고 원문과 다를 수 있습니다.</p>
+    <p>출처: 대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE), 금융감독원 전자공시시스템(DART), 한국건설기술연구원 건설공사비지수, 구글 뉴스(기사 제목·링크). 이 화면은 공개된 자료를 모아 정리한 개인 참고용 자료이며, 정리 과정에서 지연·누락·오기가 생길 수 있고 원문과 다를 수 있습니다.</p>
     <p>이 화면의 어떤 내용도 투자 권유나 여신·의사결정의 근거가 아니며, 이를 이용해 생긴 결과에 대해 작성자는 책임지지 않습니다. 정확한 내용은 각 기관의 원문 공시에서 확인하시기 바랍니다.</p>
     <p>함께 운영하는 대시보드: <a href="https://abs.namepf.com/" target="_blank" rel="noopener">유동화시장 등급 · 금리 현황</a> · <a href="https://apt.namepf.com/" target="_blank" rel="noopener">아파트 수급 · 분양시장 현황</a> · <a href="https://dc.namepf.com/" target="_blank" rel="noopener">데이터센터 개발 현황</a></p>
     <p class="contact">기획 · 운영: 한국투자증권 PF그룹 부동산금융1부 최이름 차장 <a class="sister" href="https://namepf.com/" target="_blank" rel="noopener" style="display:inline-block;margin:0 4px;text-decoration:none;white-space:nowrap"><span class="sl">바로가기:</span> → 주요 딜 수행 실적</a> <span class="ct">(<a href="mailto:name@koreainvestment.com">name@koreainvestment.com</a>, <a href="tel:02-3276-6012">02-3276-6012</a>)</span></p>
   </footer>
 </div>
+<div class="ov" id="ov" hidden></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="dr-title" hidden></aside>
 
 <script>
 const $ = s => document.querySelector(s);
@@ -427,7 +607,7 @@ function rowHTML(r){
   return `<tr>
     <td class="rank s1">${r.rank}</td>
     <td class="mv s2 ${mvc}" title="${r.prev!=null?`전년 ${r.prev}위 → 올해 ${r.rank}위`:"전년 순위 없음"}">${mvt}</td>
-    <td class="co s3">${esc(r.name)}${r.region?`<small>${esc(r.region)}</small>`:""}</td>
+    <td class="co s3"><button type="button" class="cob" data-reg="${esc(regOf(r))}" title="${esc(r.name)} 상세 보기 · 등급 이력 · 재무 · 공시 · 기사">${WATCH.has(regOf(r))?'<span class="wst" aria-label="관심">★</span>':""}${esc(r.name)}</button>${r.region?`<small>${esc(r.region)}</small>`:""}</td>
     <td class="num amt"><div class="aw"><span title="${esc(amtTip(r))}">${fmtAmt(r.amount)}</span><span class="bar" aria-hidden="true"><i style="width:${(r.amount/MAX*100).toFixed(2)}%"></i></span></div></td>
     <td>${b?`<span class="best grade ${gcls(b)}">${esc(clean(b.grade))}</span>${kdTag(b.kind)}`:'<span class="dim">–</span>'}</td>
     ${AG.map((a,i)=>ratingCell(r,a,i===0)).join("")}</tr>`;
@@ -457,6 +637,7 @@ function render(){
     if(state.grade==="none"&&list.length) return false;
     if(["AA","A","BBB","BB","CP"].includes(state.grade)&&bucket(b)!==state.grade) return false;
     if(q&&!r.name.toLowerCase().includes(q)) return false;
+    if(state.wonly&&!WATCH.has(regOf(r))) return false;
     return true;
   }).sort(cmp);
   VIEW=rows;
@@ -488,6 +669,7 @@ function filterText(){
   if(state.agency!=="all") f.push(`평가사 ${state.agency}`);
   if(state.fresh) f.push("1년 내 평가만");
   if(state.q.trim()) f.push(`검색어 "${state.q.trim()}"`);
+  if(state.wonly) f.push("관심 회사만");
   return f.join(" · ");
 }
 async function downloadXLSX(){
@@ -539,6 +721,7 @@ bindSeg("seg-band","band"); bindSeg("seg-mv","mv"); bindSeg("seg-scope","scope")
 $("#f-grade").addEventListener("change",e=>{state.grade=e.target.value;render()});
 $("#f-agency").addEventListener("change",e=>{state.agency=e.target.value;render()});
 $("#f-fresh").addEventListener("change",e=>{state.fresh=e.target.checked;render()});
+$("#f-wonly").addEventListener("change",e=>{state.wonly=e.target.checked;render()});
 $("#f-q").addEventListener("input",e=>{state.q=e.target.value;render()});
 document.querySelectorAll("#thead th[data-k] button").forEach(b=>b.addEventListener("click",()=>{
   const k=b.parentElement.dataset.k;
@@ -546,18 +729,293 @@ document.querySelectorAll("#thead th[data-k] button").forEach(b=>b.addEventListe
   render();
 }));
 
+// ================= 추가 데이터: 등급 이력 · 변동 · 기사 · DART · 공사비 =================
+let HIST={}, EVENTS=[], NEWS=[], DART=null, COST=null, BYREG={};
+const AGS={KIS:"KIS",KR:"KR",NICE:"NICE"}, KINDS={bond:"회사채",icr:"ICR",cp:"CP"};
+const DOW="일월화수목금토";
+const kst=()=>new Date(Date.now()+9*3600e3);
+const todayS=()=>kst().toISOString().slice(0,10);
+const addDays=(s,n)=>{const d=new Date(s+"T00:00:00Z");d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);};
+const dayLabel=s=>{const d=new Date(s+"T00:00:00Z");const t=todayS();return `${s.slice(5).replace("-",".")} (${DOW[d.getUTCDay()]})${s===t?" · 오늘":s===addDays(t,-1)?" · 어제":""}`;};
+const md=s=>s?s.slice(5,10).replace("-","."):"";
+const won=v=>v==null?"–":Math.round(v).toLocaleString("ko-KR");
+const pctS=v=>v==null?"–":`${v.toFixed(1)}%`;
+const grank=(g,k)=>{g=clean(g);const L=k==="cp"?ST:LT;const i=L.indexOf(g);return i<0?null:i;};
+const dartUrl=no=>`https://dart.fss.or.kr/dsaf001/main.do?rcpNo=${no}`;
+
+// 관심 회사(이 브라우저에만 저장)
+let WATCH=new Set();
+try{ WATCH=new Set(JSON.parse(localStorage.getItem("cons-watch")||"[]")); }catch{}
+const saveWatch=()=>{ try{ localStorage.setItem("cons-watch",JSON.stringify([...WATCH])); }catch{} };
+const regOf=r=>r.reg||r.name;
+
+// ---------- 신용등급 이력 → 평가 이벤트 ----------
+function ratingActions(reg){
+  const h=HIST[reg]||{}, out=[];
+  for(const [ag,arr] of Object.entries(h)){
+    const by={};
+    arr.forEach(e=>{(by[e[3]]=by[e[3]]||[]).push(e);});
+    for(const [kind,list] of Object.entries(by)){
+      list.sort((a,b)=>a[0]<b[0]?1:-1);
+      list.forEach((e,i)=>{
+        const p=list[i+1]; let dir="first";
+        if(p){ const a=grank(e[1],kind), b=grank(p[1],kind);
+          if(a!=null&&b!=null&&a!==b) dir=a<b?"up":"down";
+          else if((e[2]||"")!==(p[2]||"")) dir="ol";
+          else dir="same"; }
+        out.push({d:e[0],ag,kind,grade:e[1],ol:e[2],ev:e[4],prev:p,dir});
+      });
+    }
+  }
+  return out.sort((a,b)=>a.d<b.d?1:-1);
+}
+function actionText(a){
+  const k=KINDS[a.kind]||"", ol=a.ol&&a.ol!=="안정적"?` · ${a.ol}`:"";
+  if(a.dir==="up"||a.dir==="down") return `${a.ag} ${k} ${a.prev[1]} → ${a.grade}${ol}`;
+  if(a.dir==="ol") return `${a.ag} ${k} ${a.grade} · Outlook ${a.prev[2]||"–"} → ${a.ol||"–"}`;
+  if(a.dir==="same") return `${a.ag} ${k} ${a.grade}${ol} 유지`;
+  return `${a.ag} ${k} ${a.grade}${ol}`;
+}
+const dirMark=d=>d==="up"?'<span class="dir up">▲상향</span> ':d==="down"?'<span class="dir down">▼하향</span> ':"";
+
+// ---------- 피드 ----------
+let FEED={win:7,type:"all",watch:false,shown:10};
+function feedItems(){
+  const since=addDays(todayS(),-FEED.win+1), items=[];
+  for(const r of ROWS){
+    const reg=regOf(r);
+    for(const a of ratingActions(reg)){
+      if(a.d<since) break;
+      const url=(r.ratings[a.ag]||{}).url;
+      items.push({d:a.d,t:"rating",reg,co:r.name,pri:a.dir==="up"||a.dir==="down"?0:a.dir==="ol"?1:3,
+        html:`${dirMark(a.dir)}${esc(actionText(a))}${a.ev?`<span class="sm">${esc(a.ev)}평가</span>`:""}`,url,
+        tag:"신용등급",meta:a.ag==="KIS"?"한국신용평가":a.ag==="KR"?"한국기업평가":"나이스신용평가"});
+    }
+  }
+  for(const e of EVENTS){
+    if(e.d<since) continue;
+    if(e.type==="sipyeong") items.push({d:e.d,t:"sys",pri:0,html:esc(e.title),tag:"시공능력평가",meta:"대한건설협회"});
+    else if(e.type==="rating"&&e.dir==="off"){ const r=BYREG[e.reg]; if(r) items.push({d:e.d,t:"rating",reg:e.reg,co:r.name,pri:2,html:esc(e.title),url:e.url,tag:"신용등급",meta:e.ag}); }
+  }
+  if(DART&&DART.co) for(const [reg,c] of Object.entries(DART.co)){
+    const r=BYREG[reg]; if(!r) continue;
+    for(const x of c.disc||[]){ if(x.d<since) continue;
+      items.push({d:x.d,t:"disc",reg,co:r.name,pri:x.cat==="리스크"?0:x.cat==="정기"?4:1,html:`${esc(x.nm)}${x.rm?`<span class="sm">${esc(x.rm)}</span>`:""}`,url:dartUrl(x.no),tag:`공시 · ${x.cat}`,meta:"DART"}); }
+  }
+  for(const n of NEWS){
+    const d=n.d.slice(0,10); if(d<since) continue;
+    const r=n.reg?BYREG[n.reg]:null;
+    items.push({d,tm:n.d,t:"news",reg:r?n.reg:null,co:r?r.name:null,pri:2,html:esc(n.t),url:n.u,tag:`기사 · ${n.cat}`,meta:`${n.src||""}${n.n>1?` 외 ${n.n-1}건`:""}`});
+  }
+  if(COST&&COST.cci&&COST.cci.posted>=since){
+    const s=COST.cci.series["건설 전체"]||[], L=s[s.length-1], Y=s.find(x=>x[0]===`${+L[0].slice(0,4)-1}${L[0].slice(4)}`);
+    items.push({d:COST.cci.posted,t:"cost",pri:1,html:`${L[0].replace("-","년 ")}월 건설공사비지수 ${L[1].toFixed(2)}${Y?` · 전년 동월 대비 ${((L[1]/Y[1]-1)*100).toFixed(1)}%`:""}${COST.cci.provisional?'<span class="sm">잠정</span>':""}`,url:"#cost",tag:"공사비",meta:"한국건설기술연구원"});
+  }
+  return items.filter(x=>(FEED.type==="all"||x.t===FEED.type||(FEED.type==="rating"&&x.t==="sys")||(FEED.type==="news"&&x.t==="cost"))&&(!FEED.watch||(x.reg&&WATCH.has(x.reg))))
+    .sort((a,b)=>a.d!==b.d?(a.d<b.d?1:-1):a.pri-b.pri||((b.tm||"")>(a.tm||"")?1:-1));
+}
+function renderFeed(){
+  const all=feedItems(), list=all.slice(0,FEED.shown), t=todayS();
+  const nToday=all.filter(x=>x.d===t).length;
+  const cnt={rating:0,disc:0,news:0}; all.forEach(x=>{ if(cnt[x.t]!=null) cnt[x.t]++; });
+  $("#feed-tail").innerHTML=`오늘 <b>${nToday}</b>건 · 최근 ${FEED.win}일 <b>${all.length}</b>건`;
+  const w=$("#f-watch"); w.closest("label").setAttribute("aria-disabled",String(!WATCH.size)); w.disabled=!WATCH.size&&!FEED.watch;
+  if(!list.length){ $("#feed-list").innerHTML=`<div class="fempty">${FEED.watch?"관심 회사에 해당하는 변동이 없습니다. 기간을 늘려 보세요.":"이 기간에 변동이 없습니다. 기간을 늘려 보세요."}</div>`; return; }
+  let html="", last="";
+  for(const x of list){
+    if(x.d!==last){ html+=`<div class="fday">${dayLabel(x.d)}</div>`; last=x.d; }
+    const co=x.co?`<button type="button" class="cob" data-reg="${esc(x.reg)}" title="${esc(x.co)} 상세 보기">${WATCH.has(x.reg)?'<span class="wst" aria-label="관심">★</span>':""}${esc(x.co)}</button>`:'<span class="dim">업계</span>';
+    const tt=x.url?`<a class="tt" href="${esc(x.url)}"${x.url[0]==="#"?"":' target="_blank" rel="noopener"'}>${x.html}</a>`:`<span class="tt">${x.html}</span>`;
+    html+=`<div class="fd"><span class="tag t-${x.t}">${esc(x.tag)}</span>${co}${tt}<span class="mt">${esc(x.meta||"")}</span></div>`;
+  }
+  if(all.length>list.length) html+=`<button type="button" class="fmore" id="feed-more">더 보기 (${all.length-list.length}건 더)</button>`;
+  $("#feed-list").innerHTML=html;
+  $("#feed-more")?.addEventListener("click",()=>{FEED.shown+=30;renderFeed();});
+}
+function bindFeed(){
+  const seg=(id,key,num)=>document.querySelectorAll(`#${id} button`).forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(`#${id} button`).forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+    FEED[key]=num?+b.dataset.v:b.dataset.v; FEED.shown=10; renderFeed(); }));
+  seg("fseg-win","win",true); seg("fseg-type","type",false);
+  $("#f-watch").addEventListener("change",e=>{FEED.watch=e.target.checked;FEED.shown=10;renderFeed();});
+}
+
+// ---------- 회사 상세 ----------
+let LASTFOCUS=null;
+function openCo(reg,push=true){
+  const r=BYREG[reg]; if(!r) return;
+  LASTFOCUS=document.activeElement;
+  $("#drawer").innerHTML=coHTML(r); $("#drawer").hidden=false; $("#ov").hidden=false;
+  document.body.style.overflow="hidden";
+  if(push) history.replaceState(null,"",`#co=${encodeURIComponent(reg)}`);
+  $("#dr-x").focus();
+  $("#dr-x").addEventListener("click",closeCo);
+  $("#dr-star").addEventListener("click",e=>{ WATCH.has(reg)?WATCH.delete(reg):WATCH.add(reg); saveWatch();
+    e.currentTarget.setAttribute("aria-pressed",String(WATCH.has(reg))); e.currentTarget.textContent=WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"; renderFeed(); render(); });
+  $("#dr-copy").addEventListener("click",()=>copyText(coSummary(r),"심사요청서용 요약을 복사했습니다"));
+  $("#dr-link").addEventListener("click",()=>copyText(`${location.origin}${location.pathname}#co=${encodeURIComponent(reg)}`,"이 회사 링크를 복사했습니다"));
+}
+function closeCo(){
+  $("#drawer").hidden=true; $("#ov").hidden=true; document.body.style.overflow="";
+  if(location.hash.startsWith("#co=")) history.replaceState(null,"",location.pathname+location.search);
+  LASTFOCUS?.focus?.();
+}
+function copyText(t,msg){
+  const done=()=>{ const el=document.createElement("div"); el.className="toast"; el.textContent=msg; document.body.appendChild(el); setTimeout(()=>el.remove(),1800); };
+  if(navigator.clipboard?.writeText) navigator.clipboard.writeText(t).then(done,()=>fallback());
+  else fallback();
+  function fallback(){ const ta=document.createElement("textarea"); ta.value=t; document.body.appendChild(ta); ta.select(); try{document.execCommand("copy");done();}catch{} ta.remove(); }
+}
+function finOf(reg){ return DART&&DART.co&&DART.co[reg]&&DART.co[reg].fin||null; }
+function finPeriods(f){
+  if(!f||!f.periods) return [];
+  const fy=f.periods.filter(p=>p.t==="FY").sort((a,b)=>a.p<b.p?-1:1).slice(-3);
+  const q=f.periods.filter(p=>p.t!=="FY").sort((a,b)=>a.p<b.p?1:-1)[0];
+  return q?[...fy,q]:fy;
+}
+function coSummary(r){
+  const L=[`[시공사 개요] ${r.name}`];
+  L.push(`- 시공능력평가: ${META.year}년 ${r.rank}위 (평가액 ${fmtAmt(r.amount)}억원${r.prev!=null?`, 전년 ${r.prev}위`:""})`);
+  const rt=AG.map(a=>{const x=r.ratings[a]; return x&&x.grade?`${a} ${x.grade}${x.kind&&x.kind!=="bond"?`(${KINDS[x.kind]})`:""}${x.outlook?`·${x.outlook}`:""}${x.date?` '${x.date.slice(2).replace(/-/g,".")}`:""}`:null;}).filter(Boolean);
+  L.push(`- 신용등급: ${rt.length?rt.join(" / "):"공시 등급 없음"}`);
+  const f=finOf(regOf(r)), ps=finPeriods(f);
+  if(ps.length){
+    L.push(`- 재무(${f.basis}, 억원):`);
+    for(const p of ps) L.push(`  ${p.t==="FY"?p.p+"년":p.p+" 누적"}: 매출 ${won(p.rev)} · 영업이익 ${won(p.op)}${p.opm!=null?`(${p.opm}%)`:""} · 순이익 ${won(p.ni)} · 부채비율 ${p.dr!=null?p.dr+"%":"–"}`);
+  }
+  L.push(`출처: 대한건설협회, 한국신용평가·한국기업평가·나이스신용평가${ps.length?", DART":""} (${location.host||"cons.namepf.com"}, ${todayS()} 기준)`);
+  return L.join("\n");
+}
+function coHTML(r){
+  const reg=regOf(r), mvt=r.prev==null?"전년 순위 없음":r.mv>0?`전년 ${r.prev}위 → ▲${r.mv}`:r.mv<0?`전년 ${r.prev}위 → ▼${-r.mv}`:`전년 ${r.prev}위 · 유지`;
+  const dc=DART&&DART.co&&DART.co[reg];
+  const now=AG.map(a=>{const x=r.ratings[a]||{}; const g=x.grade;
+    return `<div><div class="ag">${AGN[a]}</div>${g?`<div class="gv"><span class="grade ${gcls({...x,kind:x.kind||"bond"})}">${esc(g)}</span>${kdTag(x.kind)}${olTag(x.outlook)}</div><div class="dt">${x.date?x.date.replace(/-/g,"."):""}</div>`:'<div class="gv"><span class="dim">공시 등급 없음</span></div>'}${x.url?`<div><a class="dt" href="${esc(x.url)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">원문 →</a></div>`:""}</div>`;}).join("");
+  const acts=ratingActions(reg).slice(0,14);
+  const histT=acts.length?`<table class="mini"><thead><tr><th>평가일</th><th>평가사</th><th>종류</th><th>등급</th><th>Outlook</th><th>변동</th></tr></thead><tbody>${acts.map(a=>`<tr><td class="n" style="text-align:left">${a.d.replace(/-/g,".")}</td><td>${a.ag}</td><td>${KINDS[a.kind]||""}${a.ev?` <span class="dim">${esc(a.ev)}</span>`:""}</td><td class="grade">${esc(a.grade)}</td><td>${esc(a.ol||"")}</td><td>${a.dir==="up"?'<span class="dir up">▲상향</span>':a.dir==="down"?'<span class="dir down">▼하향</span>':a.dir==="ol"?"전망 변경":a.dir==="same"?'<span class="dim">유지</span>':""}</td></tr>`).join("")}</tbody></table>`:'<p class="hint" style="margin-top:8px">평가사 페이지에 등급 이력이 없습니다.</p>';
+  // 시평 항목
+  const P=r.parts||{}, pm=Math.max(...Object.values(P).filter(v=>v!=null),1);
+  const parts=Object.entries(P).filter(([,v])=>v!=null).map(([k,v])=>`<span>${k}평가액</span><span class="pb"><i style="width:${(v/pm*100).toFixed(1)}%"></i></span><span class="pv">${fmtAmt(v)}</span>`).join("");
+  // 재무
+  const f=dc&&dc.fin, ps=finPeriods(f);
+  let fin;
+  if(ps.length){
+    const rowsF=[["매출액","rev",won],["영업이익","op",won],["영업이익률","opm",pctS],["당기순이익","ni",won],["자산총계","assets",won],["부채총계","liab",won],["자본총계","equity",won],["부채비율","dr",pctS]];
+    fin=`<div class="fin-box"><table class="mini"><thead><tr><th>${f.basis} · 억원</th>${ps.map(p=>`<th class="n">${p.t==="FY"?p.p:p.p.replace(" ","<br>")}</th>`).join("")}</tr></thead><tbody>${rowsF.map(([lb,k,fm])=>`<tr><td>${lb}</td>${ps.map(p=>`<td class="n">${fm(p[k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div><p class="hint" style="margin-top:6px">분기 열은 올해 누적 실적과 분기말 재무상태입니다. 부채비율 = 부채총계 ÷ 자본총계.</p>`;
+  } else if(!DART){
+    fin='<p class="hint">재무·공시 데이터는 준비 중입니다.</p>';
+  } else if(dc&&dc.audit){
+    fin=`<p class="hint">정기보고서(사업·분기보고서)를 내지 않는 회사라 DART에 구조화된 재무가 없습니다. 최근 감사보고서 원문: <a href="${dartUrl(dc.audit.no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(dc.audit.nm)} (${dc.audit.d.replace(/-/g,".")})</a></p>`;
+  } else fin='<p class="hint">DART에서 이 회사의 재무를 찾지 못했습니다.</p>';
+  const disc=(dc&&dc.disc||[]).slice(0,15);
+  const discH=disc.length?`<ul class="lst">${disc.map(x=>`<li><span class="d">${md(x.d)}</span><span class="tag t-disc">${esc(x.cat)}</span><a href="${dartUrl(x.no)}" target="_blank" rel="noopener">${esc(x.nm)}</a></li>`).join("")}</ul>`:`<p class="hint">${DART?"최근 90일 주요 공시가 없습니다.":"준비 중입니다."}</p>`;
+  const nw=NEWS.filter(n=>n.reg===reg).slice(0,12);
+  const newsH=nw.length?`<ul class="lst">${nw.map(n=>`<li><span class="d">${md(n.d)}</span><span class="tag t-news">${esc(n.cat)}</span><span><a href="${esc(n.u)}" target="_blank" rel="noopener">${esc(n.t)}</a><span class="src">${esc(n.src||"")}${n.n>1?` 외 ${n.n-1}건`:""}</span></span></li>`).join("")}</ul>`:'<p class="hint">최근 30일 관련 기사가 없습니다.</p>';
+  const dartCo=dc?`https://dart.fss.or.kr/dsab007/main.do?autoSearch=Y&textCrpNm=${encodeURIComponent(r.name.replace(/㈜/g,""))}`:"";
+  return `<div class="dr-h"><div class="ttl"><h2 id="dr-title">${esc(r.name)}</h2>
+      <div class="meta"><span>시평 <b>${r.rank}</b>위</span><span>${mvt}</span><span>평가액 <b>${fmtAmt(r.amount)}</b>억원</span>${r.region?`<span>${esc(r.region)}</span>`:""}</div></div>
+      <button type="button" class="xbtn" id="dr-x" aria-label="닫기">×</button></div>
+    <div class="dr-b">
+      <div class="acts"><button type="button" class="dl" id="dr-copy" title="시평·등급·재무 요약을 글로 복사합니다">심사요청서용 요약 복사</button>
+        <button type="button" class="dl" id="dr-star" aria-pressed="${WATCH.has(reg)}">${WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"}</button>
+        <button type="button" class="dl" id="dr-link">링크 복사</button></div>
+      <div class="card"><h3>신용등급 <span>평가사 3사 현재</span></h3><div class="rnow">${now}</div>${histT}</div>
+      <div class="card"><h3>재무 요약 ${dc?`<a href="${dartCo}" target="_blank" rel="noopener">DART 공시 검색 →</a>`:""}</h3>${fin}</div>
+      <div class="card"><h3>최근 공시 <span>90일 · 주요 공시만</span></h3>${discH}</div>
+      <div class="card"><h3>최근 기사 <span>30일 · 제목·출처만</span></h3>${newsH}</div>
+      <div class="card"><h3>시공능력평가 <span>${META.year}년 · 억원</span></h3><div class="parts">${parts}</div>${r.civil!=null?`<p class="hint" style="margin-top:8px">토목분야 ${fmtAmt(r.civil)} · 건축분야 ${fmtAmt(r.arch)}억원</p>`:""}</div>
+      <p class="hint">공개 자료를 자동으로 모은 참고용 요약입니다. 등급·재무는 각 원문에서 한 번 더 확인하시기 바랍니다.</p>
+    </div>`;
+}
+
+// ---------- 공사비 지표 ----------
+const CSER=[["건설 전체","--c1"],["건축","--c2"],["토목","--c3"]];
+let CRANGE=60;
+function renderCost(){
+  const c=COST&&COST.cci;
+  if(!c||!c.series||!c.series["건설 전체"]){ $("#cost").innerHTML='<div class="placeholder">공사비 지표를 불러오지 못했습니다.</div>'; return; }
+  const s=c.series["건설 전체"], L=s[s.length-1], at=(m)=>{const x=s.find(v=>v[0]===m);return x?x[1]:null;};
+  const ym=(m,dy,dm=0)=>{let y=+m.slice(0,4)+dy, mo=+m.slice(5)+dm; while(mo<1){mo+=12;y--;} return `${y}-${String(mo).padStart(2,"0")}`;};
+  const ch=(a,b)=>a!=null&&b!=null?((a/b-1)*100):null;
+  const sg=v=>v==null?"–":`${v>0?"+":""}${v.toFixed(1)}%`;
+  const mom=ch(L[1],at(ym(L[0],0,-1))), yoy=ch(L[1],at(ym(L[0],-1))), y3=ch(L[1],at(ym(L[0],-3)));
+  $("#cost-k").innerHTML=`<div><div class="dim" style="font-size:.78rem">건설공사비지수 · ${L[0].replace("-","년 ")}월${c.provisional?" (잠정)":""}</div>
+      <div class="num">${L[1].toFixed(2)}<small>2020년 = 100</small></div></div>
+    <div class="kv"><span>전월 대비</span><b>${sg(mom)}</b><span>전년 동월 대비</span><b>${sg(yoy)}</b><span>3년 전 대비</span><b>${sg(y3)}</b>
+      <span>건축 / 토목</span><b>${(c.series["건축"]||[]).slice(-1)[0]?.[1].toFixed(1)??"–"} / ${(c.series["토목"]||[]).slice(-1)[0]?.[1].toFixed(1)??"–"}</b></div>
+    <p class="cnote">공사비 증액 협의나 물가변동 조정 때 기준 시점 대비 상승률을 보는 지표입니다. 한국건설기술연구원이 매월 말 전전월 지수를 발표합니다(최근 발표 ${c.posted.replace(/-/g,".")}).</p>
+    <p class="cnote"><a href="${esc(c.url)}" target="_blank" rel="noopener">원문 · 세부 지수 보기 →</a></p>`;
+  drawCost();
+}
+function drawCost(){
+  const c=COST.cci, box=$("#cost-chart"), W=Math.max(320,box.clientWidth||640), H=W<520?220:260, m={l:40,r:W<520?12:64,t:12,b:24};
+  const ser=CSER.map(([k,v])=>({k,v,pts:(c.series[k]||[]).slice(-CRANGE)}));
+  const xs=ser[0].pts.map(p=>p[0]); if(!xs.length) return;
+  const vals=ser.flatMap(s=>s.pts.map(p=>p[1]));
+  let lo=Math.floor(Math.min(...vals,100)/5)*5, hi=Math.ceil(Math.max(...vals)/5)*5;
+  const X=i=>m.l+(W-m.l-m.r)*(i/(xs.length-1||1)), Y=v=>m.t+(H-m.t-m.b)*(1-(v-lo)/(hi-lo||1));
+  const step=(hi-lo)/5>4?10:5;
+  let g="";
+  for(let v=lo;v<=hi;v+=step) g+=`<line class="gl" x1="${m.l}" x2="${W-m.r}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ax" x="${m.l-6}" y="${Y(v)+4}" text-anchor="end">${v}</text>`;
+  if(lo<=100&&hi>=100) g+=`<line class="ref" x1="${m.l}" x2="${W-m.r}" y1="${Y(100)}" y2="${Y(100)}"/>`;
+  const years=[...new Set(xs.map(x=>x.slice(0,4)))], every=Math.ceil(years.length/(W<520?4:7));
+  years.forEach((y,i)=>{ const j=xs.indexOf(`${y}-01`); if(j<0||i%every) return; g+=`<text class="ax" x="${X(j)}" y="${H-6}" text-anchor="middle">${y}</text>`; });
+  const lines=ser.map(s=>`<path class="ln" style="stroke:var(${s.v})" d="${s.pts.map((p,i)=>`${i?"L":"M"}${X(i).toFixed(1)},${Y(p[1]).toFixed(1)}`).join("")}"/>`).join("");
+  let labs="";
+  if(W>=520){ const ys=ser.map(s=>({s,y:Y(s.pts[s.pts.length-1][1])})).sort((a,b)=>a.y-b.y);
+    for(let i=1;i<ys.length;i++) if(ys[i].y-ys[i-1].y<13) ys[i].y=ys[i-1].y+13;
+    labs=ys.map(o=>`<text class="lab" x="${W-m.r+6}" y="${o.y+4}">${o.s.k}</text>`).join(""); }
+  box.innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="건설공사비지수 추이(2020년=100), 건설 전체·건축·토목">${g}${lines}${labs}<line class="xh" id="cx" y1="${m.t}" y2="${H-m.b}" visibility="hidden"/>${ser.map((s,i)=>`<circle id="cd${i}" r="4" style="fill:var(${s.v});stroke:var(--surface);stroke-width:2" visibility="hidden"/>`).join("")}<rect x="${m.l}" y="${m.t}" width="${W-m.l-m.r}" height="${H-m.t-m.b}" fill="transparent" id="chit"/></svg><div class="tip" id="ctip" hidden></div>`;
+  const hit=$("#chit"), tip=$("#ctip");
+  const move=ev=>{
+    const rc=box.querySelector("svg").getBoundingClientRect(), sx=W/rc.width;
+    const px=((ev.touches?ev.touches[0].clientX:ev.clientX)-rc.left)*sx;
+    const i=Math.max(0,Math.min(xs.length-1,Math.round((px-m.l)/(W-m.l-m.r)*(xs.length-1))));
+    $("#cx").setAttribute("x1",X(i)); $("#cx").setAttribute("x2",X(i)); $("#cx").setAttribute("visibility","visible");
+    ser.forEach((s,k)=>{const c=$(`#cd${k}`); c.setAttribute("cx",X(i)); c.setAttribute("cy",Y(s.pts[i][1])); c.setAttribute("visibility","visible");});
+    tip.hidden=false;
+    tip.innerHTML=`<div style="margin-bottom:3px">${xs[i].replace("-","년 ")}월</div>${ser.map(s=>`<div class="r"><i style="background:var(${s.v})"></i>${s.k} <b>${s.pts[i][1].toFixed(2)}</b></div>`).join("")}`;
+    const tx=X(i)/sx, left=tx>rc.width*.6?tx-tip.offsetWidth-12:tx+12;
+    tip.style.left=`${left}px`; tip.style.top=`${8}px`;
+  };
+  const hide=()=>{tip.hidden=true;$("#cx").setAttribute("visibility","hidden");ser.forEach((s,k)=>$(`#cd${k}`).setAttribute("visibility","hidden"));};
+  hit.addEventListener("mousemove",move); hit.addEventListener("touchstart",move,{passive:true}); hit.addEventListener("touchmove",move,{passive:true});
+  hit.addEventListener("mouseleave",hide);
+  // 표로 보기(최근 13개월)
+  const last=xs.slice(-13).reverse();
+  $("#cost-tbl").innerHTML=`<table class="mini"><thead><tr><th>월</th>${CSER.map(([k])=>`<th class="n">${k}</th>`).join("")}</tr></thead><tbody>${last.map(mm=>`<tr><td>${mm.replace("-",".")}</td>${CSER.map(([k])=>{const v=(c.series[k]||[]).find(p=>p[0]===mm);return `<td class="n">${v?v[1].toFixed(2):"–"}</td>`;}).join("")}</tr>`).join("")}</tbody></table>`;
+}
+function bindCost(){
+  document.querySelectorAll("#cseg button").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll("#cseg button").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));
+    CRANGE=+b.dataset.v; drawCost(); }));
+  let t; window.addEventListener("resize",()=>{clearTimeout(t);t=setTimeout(()=>COST&&COST.cci&&drawCost(),150);});
+}
+
+// ---------- 공통 바인딩 ----------
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".cob"); if(b&&b.dataset.reg){ e.preventDefault(); openCo(b.dataset.reg); }
+});
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#drawer").hidden) closeCo(); });
+$("#ov").addEventListener("click",closeCo);
+window.addEventListener("hashchange",()=>{ const m=location.hash.match(/^#co=(.+)$/); if(m) openCo(decodeURIComponent(m[1]),false); });
+
+bindFeed(); bindCost();
 (async()=>{
-  const [D,S]=await Promise.all([getJSON("data/contractors.json"),getJSON("data/status.json")]);
+  const [D,S,Hh,Ev,Nw,Dt,Ct]=await Promise.all(["contractors","status","history","events","news","dart","cost"].map(n=>getJSON(`data/${n}.json`)));
   renderStatus(S);
   if(!D||!D.rows){
     $("#kpis").innerHTML='<div class="placeholder">데이터를 불러오지 못했습니다. 새로고침해 보세요.</div>';
     $("#tbody").innerHTML='<tr><td colspan="8" class="empty">데이터를 불러오지 못했습니다.</td></tr>';
-    $("#updated").textContent="데이터 없음"; return;
+    $("#updated").textContent="데이터 없음"; $("#feed-list").innerHTML='<div class="fempty">데이터를 불러오지 못했습니다.</div>'; return;
   }
   ROWS=D.rows.map(r=>({...r,mv:r.prev!=null?r.prev-r.rank:null}));
   MAX=Math.max(...ROWS.map(r=>r.amount)); META=D; STAT=S;
   $("#updated").textContent=S?.generated?`${D.year}년 시공능력평가 · 최종 수집 ${S.generated} KST`:`${D.year}년 시공능력평가`;
-  renderSummary(D); render();
+  ROWS.forEach(r=>{BYREG[regOf(r)]=r;});
+  HIST=Hh||{}; EVENTS=(Ev&&Ev.events)||[]; NEWS=(Nw&&Nw.items)||[]; DART=Dt&&Dt.co?Dt:null; COST=Ct||null;
+  renderSummary(D); render(); renderFeed(); renderCost();
+  const m=location.hash.match(/^#co=(.+)$/); if(m) openCo(decodeURIComponent(m[1]),false);
 })();
 </script>
 </body>
