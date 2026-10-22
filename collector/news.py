@@ -9,6 +9,8 @@
 import email.utils, hashlib, html, json, re, time, datetime as dt
 from pathlib import Path
 
+from kis_guard import kis_ok  # 한국투자증권 · 한국금융지주 계열 부정 기사는 싣지 않는다
+
 KST = dt.timezone(dt.timedelta(hours=9))
 NAMES_PATH = Path(__file__).resolve().parent / "news_names.json"
 KEEP_DAYS = 30
@@ -149,12 +151,12 @@ def collect(rows, prev_items, get, log=print):
     # 직전 목록과 합치기: 이미 본 기사(링크 해시)는 다시 넣지 않는다
     seen, merged = set(), []
     for it in prev_items or []:
-        if it["d"][:10] >= cut and not NEGATIVE.search(it["t"]) and it.get("cat") != "리스크":
+        if it["d"][:10] >= cut and not NEGATIVE.search(it["t"]) and it.get("cat") != "리스크" and kis_ok(it.get("t")):
             merged.append(it)
             seen.update(it.get("h") or [_h(it["u"])])
     for it in got:
         h = _h(it["u"])
-        if it["d"][:10] < cut or h in seen:
+        if it["d"][:10] < cut or h in seen or not kis_ok(it.get("t")):
             continue
         seen.add(h)
         merged.append(it)
