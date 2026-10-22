@@ -1,6 +1,6 @@
 """상위 100개 시공사 관련 기사 수집 (구글 뉴스 RSS · 제목 · 출처 · 링크만)
 
-- 회사별로 최근 3일 기사를 검색하고, 제목에 회사 이름이 있고 실무에 의미 있는 주제(리스크 · 신용·자금 · 실적 · 수주 · 지배구조)로
+- 회사별로 최근 3일 기사를 검색하고, 제목에 회사 이름이 있고 실무에 의미 있는 주제(신용·자금 · 실적 · 수주 · 지배구조)로
   분류되는 기사만 남긴다. 분양 홍보 · 사회공헌 같은 기사는 분류에 걸리지 않아 빠진다.
 - 업계 전반 기사도 몇 가지 검색어로 따로 모은다(회사 이름이 나오면 그 회사에 붙인다).
 - 같은 사건을 여러 매체가 쓴 기사는 하나로 묶고 건수(n)만 남긴다.
@@ -13,10 +13,7 @@ KST = dt.timezone(dt.timedelta(hours=9))
 NAMES_PATH = Path(__file__).resolve().parent / "news_names.json"
 KEEP_DAYS = 30
 
-CATS = [  # (분류, 제목 정규식) — 앞에 있는 분류가 우선
-    ("리스크", r"워크아웃|법정관리|기업회생|회생절차|회생 신청|부도|유동성 (위기|우려|악화)|자금난|자금 압박|연체|영업정지|"
-              r"중대재해|사망사고|붕괴|압수수색|과징금|기소|구속|공사대금 미지급|임금체불|부실|손상차손|채권단|"
-              r"상장폐지|감사의견|한정의견|의견거절"),
+CATS = [  # (분류, 제목 정규식) — 앞에 있는 분류가 우선. 시공사에 부정적인 기사는 NEGATIVE 로 아예 뺀다
     ("신용·자금", r"신용등급|등급 (상향|하향|전망)|등급전망|회사채|기업어음|단기사채|CP |차입|자금조달|유상증자|신종자본|영구채|"
                 r"ABSTB|ABCP|PF|브릿지론|책임준공|신용보강|우발채무|보증|대출|유동화|자본확충|재무구조|부채비율|현금"),
     ("실적", r"실적|영업이익|영업손실|순이익|순손실|매출|적자|흑자|컨센서스|어닝|수익성|원가율"),
@@ -24,8 +21,21 @@ CATS = [  # (분류, 제목 정규식) — 앞에 있는 분류가 우선
     ("지배구조", r"매각|인수|합병|M&A|최대주주|대표이사|신임 사장|사장 선임|CEO|지분|계열 분리|분할|희망퇴직|구조조정"),
 ]
 CATS = [(c, re.compile(p)) for c, p in CATS]
-INDUSTRY_Q = ["건설사 유동성", "건설사 신용등급", "건설사 PF 우발채무", "건설사 법정관리", "건설사 워크아웃", "건설 공사비 인상"]
+INDUSTRY_Q = ["건설사 신용등급", "건설사 수주", "건설 공사비 인상"]
 INDUSTRY_MUST = re.compile(r"건설")
+# 시공사에 부정적인 뉘앙스의 기사는 싣지 않는다(사이트 방문자 상당수가 시공사 관계자)
+NEGATIVE = re.compile(
+    r"워크아웃|법정관리|기업회생|회생|부도|디폴트|유동성|자금난|자금 압박|연체|미지급|체불|채권단|부실|손상|"
+    r"영업정지|중대재해|사망|사고|붕괴|추락|화재|압수수색|수사|고발|고소|기소|구속|소송|패소|분쟁|갈등|논란|의혹|"
+    r"과징금|과태료|제재|벌점|징계|하자|부적합|위반|불법|감사의견|한정의견|의견거절|상장폐지|"
+    r"위기|우려|비상|경고|빨간불|적신호|먹구름|악재|쇼크|흔들|휘청|위태|고전|난항|진통|암초|발목|"
+    r"부진|적자|손실|하락|급감|감소|둔화|역성장|뒷걸음|반토막|하회|미달|악화|축소|"
+    r"무산|좌초|불발|결렬|취소|해지|중단|철수|지연|차질|탈락|아웃|헛발질|굴욕|망신|울고|울상|"
+    r"하향|강등|부정적|감원|희망퇴직|구조조정|매각설|미분양|할인 분양|떠안|"
+    r"리스크|부담|불확실|그림자|변수|시험대|과제|산적|삐걱|부메랑|유출|재고|정정|폭락|증발|벼랑|위축|구멍|미미|"
+    r"아쉬|교훈|국감|증인|쟁점|유찰|0건|접은|물어주|빈자리|버텼|엘리엇|우울|비상등|경고등|암울|뒤처|밀려|추격당|"
+    r"절벽|한파|침체|보릿고개|빚|이자 부담|돌려막|돈맥경화|자금 경색|PF 부실|브릿지 연장 실패|"
+    r"비중 \d+%대|'0원'|0건|반등|만회|회복 노|사옥 매각|자구책|유동성 확보")
 NOISE = re.compile(r"특징주|목표가|주가|\d+(\.\d+)?% (상승|하락|급등|급락)|강세|약세|\[포토\]|\[사진\]|인사\]|부고|모집|채용|캠페인|봉사|기부|후원")
 
 
@@ -115,7 +125,7 @@ def collect(rows, prev_items, get, log=print):
         for term in q:
             try:
                 for it in _rss(get, f'"{term}" when:3d'):
-                    if not any(m in it["t"] for m in must) or NOISE.search(it["t"]) or (excl and excl.search(it["t"])):
+                    if not any(m in it["t"] for m in must) or NOISE.search(it["t"]) or NEGATIVE.search(it["t"]) or (excl and excl.search(it["t"])):
                         continue
                     c = classify(it["t"])
                     if c:
@@ -128,7 +138,7 @@ def collect(rows, prev_items, get, log=print):
         try:
             for it in _rss(get, f"{term} when:3d"):
                 c = classify(it["t"])
-                if not c or not INDUSTRY_MUST.search(it["t"]) or NOISE.search(it["t"]):
+                if not c or not INDUSTRY_MUST.search(it["t"]) or NOISE.search(it["t"]) or NEGATIVE.search(it["t"]):
                     continue
                 hit = next((r for r, must in musts if any(m in it["t"] for m in must)), None)
                 got.append({**it, "reg": hit.get("reg") if hit else None, "co": hit["name"] if hit else None, "cat": c})
@@ -139,7 +149,7 @@ def collect(rows, prev_items, get, log=print):
     # 직전 목록과 합치기: 이미 본 기사(링크 해시)는 다시 넣지 않는다
     seen, merged = set(), []
     for it in prev_items or []:
-        if it["d"][:10] >= cut:
+        if it["d"][:10] >= cut and not NEGATIVE.search(it["t"]) and it.get("cat") != "리스크":
             merged.append(it)
             seen.update(it.get("h") or [_h(it["u"])])
     for it in got:

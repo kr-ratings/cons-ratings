@@ -277,7 +277,7 @@ def extras(prev, cur, status, now, failed):
     try:
         old = _load("news.json", {}).get("items", [])
         items, nf = news.collect(cur["rows"], old, get, log=lambda m: print(m, file=sys.stderr))
-        _save("news.json", {"generated": now.strftime("%Y-%m-%d %H:%M"), "items": items})
+        _save("news.json", {"generated": now.strftime("%Y-%m-%d %H:%M"), "neg": news.NEGATIVE.pattern, "items": items})
         status["sources"]["기사"] = {"ok": nf == 0, **({"error": f"검색 {nf}건 실패"} if nf else {})}
         print(f"기사 {len(items)}건")
     except Exception as e:

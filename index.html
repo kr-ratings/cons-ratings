@@ -501,7 +501,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
     <p>시공능력평가는 대한건설협회가 매년 7월 말 공시하는 건설사별 1건 공사 수행 능력의 금액 평가입니다. 공사실적평가액, 경영평가액, 기술능력평가액, 신인도평가액을 합산하며 발주처의 입찰참가 자격 제한과 업계 순위(도급순위)의 기준으로 쓰입니다.</p>
     <p>순위와 평가액은 대한건설협회가 공시한 엑셀의 토목건축공사업(토건) 기준이며, 평가액에 마우스를 올리면 항목별 평가액이 보입니다. 전년 순위는 건설업 등록번호로 맞추므로 사명이 바뀐 회사도 이어집니다.</p>
     <p>등급은 각 평가사 기업 페이지의 현재 회사채 신용등급과 Outlook, 평가일입니다. 회사채 등급이 없는 회사는 기업신용등급(ICR)을, 그것도 없으면 기업어음(CP) 등급을 표시하고 ICR · CP 표시를 붙입니다. 회사채만 보려면 필터의 '회사채만'을 누르세요. 평가사가 등급을 내지 않았거나 유효기간이 끝난 경우 – 로 표시합니다. 최고등급은 3사 중 가장 높은 등급이며, 평가일이 1년을 넘은 등급은 날짜를 주황색으로 표시하니 평가사 원문에서 한 번 더 확인하시기 바랍니다.</p>
-    <p>최근 변동은 평가사 3사의 등급 평가(상향·하향·전망 변경·유지), DART 주요 공시(수주·채무보증·자금조달·지배구조·리스크 관련, 정기보고서), 회사 이름이 제목에 나온 기사 중 리스크·신용·실적·수주·지배구조 주제만 골라 보여 줍니다. 기사는 구글 뉴스 검색 결과의 제목·출처·링크만 싣고, 같은 내용을 여러 매체가 쓴 경우 하나로 묶습니다. 회사명을 누르면 등급 이력, DART 재무 요약(최근 5개 사업연도와 올해 최신 분기), 최근 공시·기사를 한 화면에서 볼 수 있습니다. ☆ 관심 회사는 이 브라우저에만 저장됩니다.</p>
+    <p>최근 변동은 평가사 3사의 등급 평가(상향·하향·전망 변경·유지), DART 주요 공시(수주·채무보증·자금조달·지배구조·주요사항, 정기보고서), 회사 이름이 제목에 나온 기사 중 신용·자금·실적·수주·지배구조 주제만 골라(시공사에 부정적인 기사는 제외) 보여 줍니다. 기사는 구글 뉴스 검색 결과의 제목·출처·링크만 싣고, 같은 내용을 여러 매체가 쓴 경우 하나로 묶습니다. 회사명을 누르면 등급 이력, DART 재무 요약(최근 5개 사업연도와 올해 최신 분기), 최근 공시·기사를 한 화면에서 볼 수 있습니다. ☆ 관심 회사는 이 브라우저에만 저장됩니다.</p>
     <p>공사비 지표는 한국건설기술연구원이 매월 말 발표하는 건설공사비지수(2020년 = 100)입니다. 발표 엑셀에 2000년부터의 전 기간이 들어 있어 과거 수정치도 함께 반영됩니다.</p>
     <p>매일 오전(08:00)에 원 출처에서 시공능력평가와 등급을 다시 받아 갱신합니다. 시공능력평가는 매년 7월 말 새 공시가 올라오면 다음 날 아침에 반영됩니다.</p>
   </details>
@@ -519,6 +519,9 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// 시공사에 부정적인 뉘앙스의 기사는 화면에 올리지 않는다(수집 단계에서도 거르지만 한 번 더)
+const NEG_FALLBACK=/워크아웃|법정관리|회생|부도|유동성|부실|중대재해|사망|사고|붕괴|위기|우려|논란|의혹|소송|적자|손실|부진|하락|급감|악화|무산|좌초|철수|지연|차질|탈락|아웃|헛발질|하향|강등|미분양|리스크|부담|불확실/;
+function newsNeg(Nw){ try { if (Nw&&Nw.neg) return new RegExp(Nw.neg); } catch(e){} return NEG_FALLBACK; }
 const getJSON = async p => { try { const r = await fetch(p, {cache:"no-store"}); return r.ok ? await r.json() : null; } catch { return null; } };
 
 const AG=["KIS","KR","NICE"], AGN={KIS:"한국신용평가",KR:"한국기업평가",NICE:"나이스신용평가"};
@@ -834,7 +837,7 @@ function feedItems(){
   if(DART&&DART.co) for(const [reg,c] of Object.entries(DART.co)){
     const r=BYREG[reg]; if(!r) continue;
     for(const x of c.disc||[]){ if(x.d<since) continue;
-      items.push({d:x.d,t:"disc",reg,co:r.name,pri:x.cat==="리스크"?0:x.cat==="정기"?4:1,html:esc(x.nm),url:dartUrl(x.no),tag:`공시 · ${x.cat}`,meta:"DART"}); }
+      items.push({d:x.d,t:"disc",reg,co:r.name,pri:x.cat==="주요사항"?1:x.cat==="정기"?4:1,html:esc(x.nm),url:dartUrl(x.no),tag:`공시 · ${x.cat}`,meta:"DART"}); }
   }
   for(const n of NEWS){
     const d=n.d.slice(0,10); if(d<since) continue;
@@ -1080,7 +1083,7 @@ bindFeed(); bindCost();
   MAX=Math.max(...ROWS.map(r=>r.amount)); META=D; STAT=S;
   $("#updated").textContent=S?.generated?`${D.year}년 시공능력평가 · 최종 수집 ${S.generated} KST`:`${D.year}년 시공능력평가`;
   ROWS.forEach(r=>{BYREG[regOf(r)]=r;});
-  HIST=Hh||{}; EVENTS=(Ev&&Ev.events)||[]; NEWS=(Nw&&Nw.items)||[]; DART=Dt&&Dt.co?Dt:null; COST=Ct||null;
+  HIST=Hh||{}; EVENTS=(Ev&&Ev.events)||[]; NEWS=((Nw&&Nw.items)||[]).filter(n=>n.cat!=="리스크"&&!newsNeg(Nw).test(n.t||"")); DART=Dt&&Dt.co?Dt:null; COST=Ct||null;
   renderSummary(D); render(); renderFeed(); renderCost();
   const m=location.hash.match(/^#co=(.+)$/); if(m) openCo(decodeURIComponent(m[1]),false);
 })();
