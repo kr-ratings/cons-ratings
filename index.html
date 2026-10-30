@@ -510,7 +510,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
   </details>
 
   <footer>
-    <p>출처: 대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE), 금융감독원 전자공시시스템(DART), 한국건설기술연구원 건설공사비지수, 구글 뉴스(기사 제목·링크). 이 화면은 공개된 자료를 모아 정리한 개인 참고용 자료이며, 정리 과정에서 지연·누락·오기가 생길 수 있고 원문과 다를 수 있습니다.</p>
+    <p>출처: 대한건설협회 시공능력평가, 한국신용평가(KIS), 한국기업평가(KR), 나이스신용평가(NICE), 금융감독원 전자공시시스템(DART), 한국건설기술연구원 건설공사비지수, 구글 뉴스(기사 제목·링크). 이 화면은 공개된 자료를 모아 정리한 개인 참고용 자료이며, 정리 과정에서 누락·오기가 생길 수 있고 원문과 다를 수 있습니다.</p>
     <p>이 화면의 어떤 내용도 투자 권유나 여신·의사결정의 근거가 아니며, 이를 이용해 생긴 결과에 대해 작성자는 책임지지 않습니다. 정확한 내용은 각 기관의 원문 공시에서 확인하시기 바랍니다.</p>
     <p>함께 운영하는 대시보드: <a href="https://abs.namepf.com/" target="_blank" rel="noopener">유동화시장 등급 · 금리 현황</a> · <a href="https://apt.namepf.com/" target="_blank" rel="noopener">아파트 수급 · 분양시장 현황</a> · <a href="https://dc.namepf.com/" target="_blank" rel="noopener">데이터센터 개발 현황</a></p>
     <p class="contact">기획 · 운영: 한국투자증권 PF그룹 부동산금융1부 최이름 차장 <a class="sister" href="https://namepf.com/" target="_blank" rel="noopener" style="display:inline-block;margin:0 4px;text-decoration:none;white-space:nowrap"><span class="sl">바로가기:</span> → 주요 딜 수행 실적</a> <span class="ct">(<a href="mailto:name@koreainvestment.com">name@koreainvestment.com</a>, <a href="tel:02-3276-6012">02-3276-6012</a>)</span></p>
@@ -614,7 +614,7 @@ function renderSummary(D){
 function renderStatus(S){
   if(!S||!S.sources){ $("#status").innerHTML=""; return; }
   $("#status").innerHTML=Object.entries(S.sources).map(([k,v])=>
-    `<span class="src ${v.ok?"":"bad"}" title="${esc(v.ok?"정상":v.error||"오류")}"><span class="dot"></span>${esc(k)}${v.ok?"":" 지연"}</span>`).join("")
+    `<span class="src ${v.ok?"":"bad"}" title="${v.ok?"정상":"직전 값 표시"}"><span class="dot"></span>${esc(k)}</span>`).join("")
     +(S.unmapped&&S.unmapped.length?`<span class="src bad" title="${esc(S.unmapped.join(", "))}"><span class="dot"></span>평가사 코드 미등록 ${S.unmapped.length}개사</span>`:"");
 }
 
@@ -752,7 +752,7 @@ async function downloadXLSX(){
     const d=new Date(Date.now()+9*3600e3).toISOString().slice(0,10).replace(/-/g,"");
     XLSX.writeFile(wb,`cons-ratings_${d}.xlsx`);
   }catch(e){
-    console.error(e); btn.lastChild.textContent="다운로드 실패 · 다시 시도"; setTimeout(()=>{btn.lastChild.textContent=label;},2500); btn.disabled=false; return;
+    console.error(e); btn.lastChild.textContent="다시 시도해 주세요"; setTimeout(()=>{btn.lastChild.textContent=label;},2500); btn.disabled=false; return;
   }
   btn.disabled=false; btn.lastChild.textContent=label;
 }
@@ -931,7 +931,7 @@ async function coXLSX(btn,r,what){
     for(const [rr,cc,z] of fmt){ const cell=ws[XLSX.utils.encode_cell({r:rr,c:cc})]; if(cell&&typeof cell.v==="number") cell.z=z; }
     const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,title);
     XLSX.writeFile(wb,`${nm.replace(/\(주\)|（주）|주식회사|[㈜()\/\\:*?"<>|]/g,"").trim()}_${title}_${today.replace(/-/g,"")}.xlsx`);
-  }catch(e){ console.error(e); btn.lastChild.textContent="실패 · 다시 시도"; setTimeout(()=>{btn.lastChild.textContent=lb;btn.disabled=false;},2500); return; }
+  }catch(e){ console.error(e); btn.lastChild.textContent="다시 시도해 주세요"; setTimeout(()=>{btn.lastChild.textContent=lb;btn.disabled=false;},2500); return; }
   btn.disabled=false; btn.lastChild.textContent=lb;
 }
 function closeCo(){
