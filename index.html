@@ -285,6 +285,16 @@ table.mini th{font-size:.7rem;color:var(--muted);font-weight:600;background:none
 table.mini td.n,table.mini th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 table.mini tr:last-child td{border-bottom:0}
 .fin-box{overflow-x:auto}
+/* 상세 화면: 어떤 표도 화면 밖으로 밀어내지 않게 — 넓은 표는 카드 안에서만 가로 스크롤 */
+.drawer{overflow-x:hidden}
+.dr-b,.dr-b .card{min-width:0;max-width:100%}
+.dr-b .card{overflow-wrap:anywhere}
+.tb-scroll{overflow-x:auto;max-width:100%}
+table.mini.hist td{white-space:normal;word-break:keep-all;vertical-align:top}
+table.mini.hist td:first-child,table.mini.hist td:last-child{white-space:nowrap}
+table.mini.hist td.grade{min-width:44px}
+table.mini.hist .gsub{display:block;font-size:.68rem;font-weight:400;color:var(--muted);line-height:1.3;margin-top:1px}
+@media (max-width:480px){table.mini.hist{font-size:.74rem} table.mini.hist th,table.mini.hist td{padding:5px 4px}}
 .bl-sum{width:100%;border-collapse:collapse;font-size:.8rem;margin:2px 0 4px}
 .bl-sum th,.bl-sum td{padding:6px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:baseline;white-space:normal;line-height:1.5;position:static}
 .bl-sum th{width:30%;font-weight:600;color:var(--muted);background:var(--accent-soft);font-size:.76rem}
@@ -1158,7 +1168,8 @@ function coHTML(r){
   const now=AG.map(a=>{const x=r.ratings[a]||{}; const g=x.grade;
     return `<div><div class="ag">${AGN[a]}</div>${g?`<div class="gv"><span class="grade ${gcls({...x,kind:x.kind||"bond"})}">${esc(g)}</span>${kdTag(x.kind)}${olTag(x.outlook)}</div><div class="dt">${x.date?x.date.replace(/-/g,"."):""}</div>`:'<div class="gv"><span class="dim">공시 등급 없음</span></div>'}${x.url?`<div><a class="dt" href="${esc(x.url)}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:none">원문 →</a></div>`:""}</div>`;}).join("");
   const acts=ratingActions(reg).slice(0,14);
-  const histT=acts.length?`<table class="mini"><thead><tr><th>평가일</th><th>평가사</th><th>종류</th><th>등급</th><th>Outlook</th><th>변동</th></tr></thead><tbody>${acts.map(a=>`<tr><td class="n" style="text-align:left">${a.d.replace(/-/g,".")}</td><td>${a.ag}</td><td>${KINDS[a.kind]||""}${a.ev?` <span class="dim">${esc(a.ev)}</span>`:""}</td><td class="grade">${esc(a.grade)}</td><td>${esc(a.ol||"")}</td><td>${a.dir==="up"?'<span class="dir up">▲상향</span>':a.dir==="down"?'<span class="dir down">▼하향</span>':a.dir==="ol"?"전망 변경":a.dir==="same"?'<span class="dim">유지</span>':""}</td></tr>`).join("")}</tbody></table>`:'<p class="hint" style="margin-top:8px">평가사 페이지에 등급 이력이 없습니다.</p>';
+  const gTxt=g=>{ const m=String(g||"").match(/^([^(]+?)\s*(\(.+\))$/); return m?`${esc(m[1])}<small class="gsub">${esc(m[2])}</small>`:esc(g); };
+  const histT=acts.length?`<div class="tb-scroll"><table class="mini hist"><thead><tr><th>평가일</th><th>평가사</th><th>종류</th><th>등급</th><th>Outlook</th><th>변동</th></tr></thead><tbody>${acts.map(a=>`<tr><td class="n" style="text-align:left">${a.d.replace(/-/g,".")}</td><td>${a.ag}</td><td>${KINDS[a.kind]||""}${a.ev?` <span class="dim">${esc(a.ev)}</span>`:""}</td><td class="grade">${gTxt(a.grade)}</td><td>${esc(a.ol||"")}</td><td>${a.dir==="up"?'<span class="dir up">▲상향</span>':a.dir==="down"?'<span class="dir down">▼하향</span>':a.dir==="ol"?"전망 변경":a.dir==="same"?'<span class="dim">유지</span>':""}</td></tr>`).join("")}</tbody></table></div>`:'<p class="hint" style="margin-top:8px">평가사 페이지에 등급 이력이 없습니다.</p>';
   // 시평 항목
   const P=r.parts||{}, pm=Math.max(...Object.values(P).filter(v=>v!=null),1);
   const parts=Object.entries(P).filter(([,v])=>v!=null).map(([k,v])=>`<span>${k}평가액</span><span class="pb"><i style="width:${(v/pm*100).toFixed(1)}%"></i></span><span class="pv">${fmtAmt(v)}</span>`).join("");
