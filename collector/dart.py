@@ -593,3 +593,20 @@ def collect(rows, prev, now, log=print):
     afs_cache = {r: x for r, x in afs_cache.items() if r in keep}
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")
     return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors, "afs": afs_cache}
+
+
+def backlog_collect(res, rows, prev_bl, now, log=print):
+    """수주 현황 · 보증·약정 현황 (data/backlog.json) — 정기보고서 · 감사보고서가 바뀐 회사만 다시 읽는다"""
+    import backlog
+    key = os.environ.get("DART_API_KEY", "").strip()
+    D = Dart(key, log) if key else None
+    ids = json.loads(IDS_PATH.read_text("utf-8")) if IDS_PATH.exists() else {}
+    nm = {r.get("reg") or r["name"]: r["name"] for r in rows}
+
+    def names_of(k):
+        m = ids.get(k, {})
+        return [x for x in (nm.get(k), m.get("dart_name"), m.get("name"), ((res["co"].get(k) or {}).get("info") or {}).get("nm")) if x]
+
+    co, errors = backlog.collect(D, res.get("co", {}), names_of, (prev_bl or {}).get("co", {}), now.date(), log)
+    log(f"수주·보증 {len(co)}개사 (수주 {sum(1 for v in co.values() if v.get('ord'))} · 보증 {sum(1 for v in co.values() if v.get('cg'))})")
+    return {"generated": now.strftime("%Y-%m-%d %H:%M"), "co": co, "errors": errors}

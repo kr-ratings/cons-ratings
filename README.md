@@ -15,9 +15,10 @@
 | `collector/agency_ids.json` | 회사별 평가사 기업코드 매핑 (등록번호 기준) |
 | `collector/news.py` · `news_names.json` | 회사별 기사 검색(구글 뉴스 RSS, 제목·출처·링크만)과 검색용 이름 |
 | `collector/dart.py` · `dart_ids.json` | DART 주요 공시·재무 요약(환경변수 `DART_API_KEY`)과 회사별 DART 고유번호 |
+| `collector/backlog.py` | 수주 현황 · 보증·약정 현황 — 정기보고서 '수주상황' · '우발부채 등에 관한 사항', 감사보고서 주석 원문 표 |
 | `collector/cost.py` | 건설공사비지수(한국건설기술연구원) |
 | `collector/events.py` | 직전 수집과 비교한 등급·Outlook·시평 변동 기록 |
-| `data/history.json` · `events.json` · `news.json` · `dart.json` · `cost.json` | 등급 이력 · 변동 · 기사 · 공시/재무 · 공사비 |
+| `data/history.json` · `events.json` · `news.json` · `dart.json` · `backlog.json` · `cost.json` | 등급 이력 · 변동 · 기사 · 공시/재무 · 수주/보증·약정 · 공사비 |
 | `.github/workflows/update.yml` | 매일 오전(08:00) 자동 실행 (07:50 KST 시작) |
 
 ## 갱신 방식
@@ -26,7 +27,7 @@
 2. **신용등급**: `agency_ids.json`의 코드로 각 평가사 기업 페이지를 열어 현재 회사채 신용등급·Outlook·평가일을 읽습니다. 한기평은 유효기간이 끝난 등급을 제외하고, 무보증 등급을 보증 등급보다 우선합니다.
 3. **등급 이력**: NICE·KR은 기업 페이지의 회차별 등급 이력 표를, KIS는 매일 본 현재 등급을 쌓아 만듭니다.
 4. **기사**: 회사마다 최근 3일 기사를 검색해 제목에 회사 이름이 있고 신용·실적·수주·지배구조 주제인 것만 30일치 남깁니다(시공사에 부정적인 뉘앙스의 기사는 제외). 검색 이름이 정식 사명과 다른 회사(GS건설, DL이앤씨 등)는 `news_names.json`에 적습니다.
-5. **DART**: 저장소 Settings → Secrets and variables → Actions 에 `DART_API_KEY`(Open DART 인증키)가 있으면 최근 90일 주요 공시와 재무 요약(최근 5개 사업연도 + 올해 최신 분기)을 받습니다. 없으면 이 부분만 건너뜁니다.
+5. **DART**: 저장소 Settings → Secrets and variables → Actions 에 `DART_API_KEY`(Open DART 인증키)가 있으면 최근 90일 주요 공시와 재무 요약(최근 5개 사업연도 + 올해 최신 분기), 수주 현황 · 보증·약정 현황(원문 표)을 받습니다. 없으면 이 부분만 건너뜁니다.
 6. **공사비지수**: cost.kict.re.kr 게시판의 최신 월 엑셀(2000년~ 전 기간)을 받습니다.
 7. 한 출처가 실패하면 직전 값을 유지하고 화면 상단 수집 상태에 빨간 점으로 표시합니다.
 

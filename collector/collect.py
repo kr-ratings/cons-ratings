@@ -302,6 +302,11 @@ def extras(prev, cur, status, now, failed):
         if res is not None:
             _save("dart.json", res)
             status["sources"]["DART"] = {"ok": not res.get("errors"), **({"error": "; ".join(res["errors"])[:200]} if res.get("errors") else {})}
+            # 5) 수주 현황 · 보증·약정 현황 (DART 원문)
+            try:
+                _save("backlog.json", dart.backlog_collect(res, cur["rows"], _load("backlog.json", {}), now, log=lambda m: print(m, file=sys.stderr)))
+            except Exception as e:
+                print("수주·보증 수집 실패(직전 값 유지):", e, file=sys.stderr)
     except Exception as e:
         status["sources"]["DART"] = {"ok": False, "error": str(e)[:200]}
         print("DART 수집 실패:", e, file=sys.stderr)

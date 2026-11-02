@@ -14,6 +14,12 @@ res = dart.collect(rows, prev, now, log=lambda m: print(m, file=sys.stderr))
 if res is None:
     sys.exit("DART_API_KEY 없음")
 (DATA / "dart.json").write_text(json.dumps(res, ensure_ascii=False, separators=(",", ":")), "utf-8")
+prev_bl = json.loads((DATA / "backlog.json").read_text("utf-8")) if (DATA / "backlog.json").exists() else {}
+if os.environ.get("BACKLOG_FORCE"):
+    prev_bl = {}
+bl = dart.backlog_collect(res, rows, prev_bl, now, log=lambda m: print(m, file=sys.stderr))
+(DATA / "backlog.json").write_text(json.dumps(bl, ensure_ascii=False, separators=(",", ":")), "utf-8")
+print("수주·보증 오류:", bl.get("errors"))
 st = json.loads((DATA / "status.json").read_text("utf-8"))
 st["sources"]["DART"] = {"ok": not res.get("errors"), **({"error": "; ".join(res["errors"])[:200]} if res.get("errors") else {})}
 (DATA / "status.json").write_text(json.dumps(st, ensure_ascii=False, indent=1), "utf-8")
