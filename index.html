@@ -113,7 +113,8 @@ label.f{display:flex;align-items:center;gap:6px;font-size:.82rem;color:var(--mut
 select,input[type=search]{font:inherit;font-size:.85rem;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
 input[type=search]{min-width:0;width:128px}
 input[type=checkbox]{accent-color:var(--accent)}
-.tail{margin-left:auto;display:flex;align-items:center;gap:10px}
+.tail{margin-left:auto;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;justify-content:flex-end}
+.tail .dl{white-space:nowrap}
 .count{font-size:.82rem;color:var(--muted);white-space:nowrap}
 .dl{font:inherit;font-size:.82rem;font-weight:600;color:var(--accent);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
 .dl:hover{background:var(--accent-soft)}
@@ -183,7 +184,8 @@ footer a:hover{text-decoration:underline}
 @media (max-width:760px){
   .kpis{grid-template-columns:1fr}
   .kpi + .kpi{border-left:0;border-top:1px solid var(--line)}
-  .tail{margin-left:0;width:100%;justify-content:space-between}
+  .tail{margin-left:0;width:100%;justify-content:flex-end}
+  .tail .count{margin-right:auto}
   input[type=search]{width:100%}
   label.f.search{flex:1 1 100%}
   .hright{align-items:flex-start}
@@ -481,7 +483,8 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
       <label class="f" for="f-wonly" title="회사 상세에서 ☆를 눌러 정한 관심 회사만 봅니다(이 브라우저에만 저장)"><input type="checkbox" id="f-wonly"> 관심 회사만</label>
       <label class="f search" for="f-q"><input type="search" id="f-q" placeholder="회사명 검색"></label>
       <div class="tail"><span class="count" id="count"></span>
-      <button type="button" class="dl" id="dl" title="지금 표에 보이는 필터·정렬 그대로 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀 다운로드</button></div>
+      <button type="button" class="dl" id="dl" title="지금 표에 보이는 필터·정렬 그대로 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀 다운로드</button>
+      <button type="button" class="dl" id="dl-doc" title="지금 표에 보이는 회사(검색·필터 결과)의 심의서 Appendix를 워드 파일 하나로 받습니다. 회사마다 새 페이지로 시작합니다. 한 회사만 받으려면 회사명을 검색하거나 상세 화면의 버튼을 쓰세요"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>심의서 Appendix(워드)</button></div>
     </div>
     <div class="table-box">
       <table>
@@ -785,6 +788,7 @@ async function downloadXLSX(){
   btn.disabled=false; btn.lastChild.textContent=label;
 }
 $("#dl").addEventListener("click",downloadXLSX);
+$("#dl-doc").addEventListener("click",e=>appendixDownload(e.currentTarget,VIEW.slice()));
 bindSeg("seg-band","band"); bindSeg("seg-mv","mv"); bindSeg("seg-scope","scope");
 $("#f-grade").addEventListener("change",e=>{state.grade=e.target.value;render()});
 $("#f-agency").addEventListener("change",e=>{state.agency=e.target.value;render()});
@@ -1296,24 +1300,28 @@ function appendixXML(r){
   } else out.push(WX.p(b?"최근 원문에 타인을 위하여 제공한 보증·약정 표가 없습니다.":"DART에서 이 회사의 자료를 찾지 못했습니다.",{sz:18}));
   return out.join("");
 }
-async function appendixDOCX(r){
+async function appendixDOCX(rs){
+  rs=Array.isArray(rs)?rs:[rs];
   await loadJSZip();
   const tpl=await (await fetch("appendix-template.docx",{cache:"no-store"})).arrayBuffer();
   const z=await JSZip.loadAsync(tpl);
   const doc=await z.file("word/document.xml").async("string");
-  z.file("word/document.xml",doc.replace("{{BODY}}",appendixXML(r)));
+  // 여러 회사는 회사마다 새 페이지
+  z.file("word/document.xml",doc.replace("{{BODY}}",rs.map(appendixXML).join('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')));
   const now=new Date().toISOString().replace(/\.\d+Z$/,"Z");
   const core=await z.file("docProps/core.xml").async("string");
-  z.file("docProps/core.xml",core.replace(/<dc:title>.*?<\/dc:title>/,`<dc:title>${WX.x("Appendix. 시공사 개요 - "+r.name)}</dc:title>`).replace(/(<dcterms:created[^>]*>).*?(<\/dcterms:created>)/,`$1${now}$2`).replace(/(<dcterms:modified[^>]*>).*?(<\/dcterms:modified>)/,`$1${now}$2`));
+  z.file("docProps/core.xml",core.replace(/<dc:title>.*?<\/dc:title>/,`<dc:title>${WX.x("Appendix. 시공사 개요 - "+(rs.length===1?rs[0].name:`${rs.length}개사`))}</dc:title>`).replace(/(<dcterms:created[^>]*>).*?(<\/dcterms:created>)/,`$1${now}$2`).replace(/(<dcterms:modified[^>]*>).*?(<\/dcterms:modified>)/,`$1${now}$2`));
   return z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",compression:"DEFLATE"});
 }
 async function appendixDownload(btn,r){
-  const lb=btn.lastChild.textContent; btn.disabled=true; btn.lastChild.textContent="만드는 중…";
+  const rs=Array.isArray(r)?r:[r]; if(!rs.length) return;
+  const lb=btn.lastChild.textContent; btn.disabled=true; btn.lastChild.textContent=rs.length>1?`만드는 중… (${rs.length}개사)`:"만드는 중…";
   try{
-    const bl=await appendixDOCX(r), dc=DART&&DART.co&&DART.co[regOf(r)], nm=(dc&&dc.info&&dc.info.nm)||r.name;
+    await new Promise(ok=>setTimeout(ok,30)); // 버튼 글자가 먼저 바뀌게
+    const bl=await appendixDOCX(rs), one=rs[0], dc=DART&&DART.co&&DART.co[regOf(one)], nm=(dc&&dc.info&&dc.info.nm)||one.name;
     const today=new Date(Date.now()+9*3600e3).toISOString().slice(0,10).replace(/-/g,"");
     const a=document.createElement("a"); a.href=URL.createObjectURL(bl);
-    a.download=`${nm.replace(/\(주\)|（주）|주식회사|[㈜()\/\\:*?"<>|]/g,"").trim()}_Appendix_시공사개요_${today}.docx`;
+    a.download=rs.length===1?`${nm.replace(/\(주\)|（주）|주식회사|[㈜()\/\\:*?"<>|]/g,"").trim()}_Appendix_시공사개요_${today}.docx`:`Appendix_시공사개요_${rs.length}개사_${today}.docx`;
     document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
   }catch(e){ console.error(e); btn.lastChild.textContent="실패 · 다시 시도"; setTimeout(()=>{btn.lastChild.textContent=lb;btn.disabled=false;},2500); return; }
   btn.disabled=false; btn.lastChild.textContent=lb;
