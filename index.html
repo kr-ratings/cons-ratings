@@ -127,6 +127,8 @@ table{width:100%;border-collapse:separate;border-spacing:0;font-size:.84rem}
 th,td{padding:7px 9px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap;vertical-align:middle}
 /* 남는 폭은 마지막 열(NICE)이 흡수 → 나머지 열은 내용 폭에 맞춤 */
 th:last-child,td:last-child{width:100%}
+#thead th:nth-last-child(2),#tbody td:nth-last-child(2){width:100%}
+#thead th.docc,#tbody td.docc{width:1%;text-align:center;padding-right:12px}
 th:first-child,td:first-child{padding-left:12px}
 th{font-size:.74rem;font-weight:600;color:var(--muted);background:var(--surface);position:sticky;top:0;z-index:1}
 th button{all:unset;cursor:pointer}
@@ -483,8 +485,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
       <label class="f" for="f-wonly" title="회사 상세에서 ☆를 눌러 정한 관심 회사만 봅니다(이 브라우저에만 저장)"><input type="checkbox" id="f-wonly"> 관심 회사만</label>
       <label class="f search" for="f-q"><input type="search" id="f-q" placeholder="회사명 검색"></label>
       <div class="tail"><span class="count" id="count"></span>
-      <button type="button" class="dl" id="dl" title="지금 표에 보이는 필터·정렬 그대로 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀 다운로드</button>
-      <button type="button" class="dl" id="dl-doc" title="지금 표에 보이는 회사(검색·필터 결과)의 심의서 Appendix를 워드 파일 하나로 받습니다. 회사마다 새 페이지로 시작합니다. 한 회사만 받으려면 회사명을 검색하거나 상세 화면의 버튼을 쓰세요"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>심의서 Appendix(워드)</button></div>
+      <button type="button" class="dl" id="dl" title="지금 표에 보이는 필터·정렬 그대로 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀 다운로드</button></div>
     </div>
     <div class="table-box">
       <table>
@@ -497,8 +498,9 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
           <th class="ag1" data-k="KIS" title="한국신용평가"><button type="button">KIS 한신평</button></th>
           <th data-k="KR" title="한국기업평가"><button type="button">KR 한기평</button></th>
           <th data-k="NICE" title="나이스신용평가"><button type="button">NICE</button></th>
+          <th class="docc" title="회사별 심의서 Appendix(회사 개요 · 주주 · 요약 재무제표 · 수주 · 보증·약정) 워드 파일">심의서 Appendix</th>
         </tr></thead>
-        <tbody id="tbody"><tr><td colspan="8" class="empty">불러오는 중…</td></tr></tbody>
+        <tbody id="tbody"><tr><td colspan="9" class="empty">불러오는 중…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -681,7 +683,8 @@ function rowHTML(r){
     <td class="co s3"><button type="button" class="cob" data-reg="${esc(regOf(r))}" title="${esc(r.name)} 상세 보기 · 등급 이력 · 재무 · 공시 · 기사">${WATCH.has(regOf(r))?'<span class="wst" aria-label="관심">★</span>':""}${esc(r.name)}</button></td>
     <td class="num amt"><div class="aw"><span title="${esc(amtTip(r))}">${fmtAmt(r.amount)}</span><span class="bar" aria-hidden="true"><i style="width:${(r.amount/MAX*100).toFixed(2)}%"></i></span></div></td>
     <td>${b?`<span class="best grade ${gcls(b)}">${esc(clean(b.grade))}</span>${kdTag(b.kind)}`:'<span class="dim">–</span>'}</td>
-    ${AG.map((a,i)=>ratingCell(r,a,i===0)).join("")}</tr>`;
+    ${AG.map((a,i)=>ratingCell(r,a,i===0)).join("")}
+    <td class="docc"><button type="button" class="xlb docb" data-reg="${esc(regOf(r))}" title="${esc(r.name)} 심의서 Appendix 워드 파일 받기"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>워드</button></td></tr>`;
 }
 function val(r,k){
   if(k==="best"){ const b=bestOf(r); return b?gi(b):null; }
@@ -713,7 +716,7 @@ function render(){
   }).sort(cmp);
   VIEW=rows;
   $("#count").textContent=`${rows.length}개사 / 전체 ${ROWS.length}개사`;
-  $("#tbody").innerHTML=rows.length?rows.map(rowHTML).join(""):'<tr><td colspan="8" class="empty">조건에 맞는 건설사가 없습니다. 필터를 바꿔 보세요.</td></tr>';
+  $("#tbody").innerHTML=rows.length?rows.map(rowHTML).join(""):'<tr><td colspan="9" class="empty">조건에 맞는 건설사가 없습니다. 필터를 바꿔 보세요.</td></tr>';
   document.querySelectorAll("#thead th[data-k]").forEach(th=>th.setAttribute("aria-sort",th.dataset.k===state.sort?(state.dir>0?"ascending":"descending"):"none"));
 }
 function bindSeg(id,key){
@@ -788,7 +791,6 @@ async function downloadXLSX(){
   btn.disabled=false; btn.lastChild.textContent=label;
 }
 $("#dl").addEventListener("click",downloadXLSX);
-$("#dl-doc").addEventListener("click",e=>appendixDownload(e.currentTarget,VIEW.slice()));
 bindSeg("seg-band","band"); bindSeg("seg-mv","mv"); bindSeg("seg-scope","scope");
 $("#f-grade").addEventListener("change",e=>{state.grade=e.target.value;render()});
 $("#f-agency").addEventListener("change",e=>{state.agency=e.target.value;render()});
@@ -1300,28 +1302,26 @@ function appendixXML(r){
   } else out.push(WX.p(b?"최근 원문에 타인을 위하여 제공한 보증·약정 표가 없습니다.":"DART에서 이 회사의 자료를 찾지 못했습니다.",{sz:18}));
   return out.join("");
 }
-async function appendixDOCX(rs){
-  rs=Array.isArray(rs)?rs:[rs];
+async function appendixDOCX(r){
   await loadJSZip();
   const tpl=await (await fetch("appendix-template.docx",{cache:"no-store"})).arrayBuffer();
   const z=await JSZip.loadAsync(tpl);
   const doc=await z.file("word/document.xml").async("string");
-  // 여러 회사는 회사마다 새 페이지
-  z.file("word/document.xml",doc.replace("{{BODY}}",rs.map(appendixXML).join('<w:p><w:r><w:br w:type="page"/></w:r></w:p>')));
+  z.file("word/document.xml",doc.replace("{{BODY}}",appendixXML(r)));
   const now=new Date().toISOString().replace(/\.\d+Z$/,"Z");
   const core=await z.file("docProps/core.xml").async("string");
-  z.file("docProps/core.xml",core.replace(/<dc:title>.*?<\/dc:title>/,`<dc:title>${WX.x("Appendix. 시공사 개요 - "+(rs.length===1?rs[0].name:`${rs.length}개사`))}</dc:title>`).replace(/(<dcterms:created[^>]*>).*?(<\/dcterms:created>)/,`$1${now}$2`).replace(/(<dcterms:modified[^>]*>).*?(<\/dcterms:modified>)/,`$1${now}$2`));
+  z.file("docProps/core.xml",core.replace(/<dc:title>.*?<\/dc:title>/,`<dc:title>${WX.x("Appendix. 시공사 개요 - "+r.name)}</dc:title>`).replace(/(<dcterms:created[^>]*>).*?(<\/dcterms:created>)/,`$1${now}$2`).replace(/(<dcterms:modified[^>]*>).*?(<\/dcterms:modified>)/,`$1${now}$2`));
   return z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",compression:"DEFLATE"});
 }
 async function appendixDownload(btn,r){
-  const rs=Array.isArray(r)?r:[r]; if(!rs.length) return;
-  const lb=btn.lastChild.textContent; btn.disabled=true; btn.lastChild.textContent=rs.length>1?`만드는 중… (${rs.length}개사)`:"만드는 중…";
+  if(btn.disabled) return;
+  const lb=btn.lastChild.textContent; btn.disabled=true; btn.lastChild.textContent="만드는 중…";
   try{
     await new Promise(ok=>setTimeout(ok,30)); // 버튼 글자가 먼저 바뀌게
-    const bl=await appendixDOCX(rs), one=rs[0], dc=DART&&DART.co&&DART.co[regOf(one)], nm=(dc&&dc.info&&dc.info.nm)||one.name;
+    const bl=await appendixDOCX(r), dc=DART&&DART.co&&DART.co[regOf(r)], nm=(dc&&dc.info&&dc.info.nm)||r.name;
     const today=new Date(Date.now()+9*3600e3).toISOString().slice(0,10).replace(/-/g,"");
     const a=document.createElement("a"); a.href=URL.createObjectURL(bl);
-    a.download=rs.length===1?`${nm.replace(/\(주\)|（주）|주식회사|[㈜()\/\\:*?"<>|]/g,"").trim()}_Appendix_시공사개요_${today}.docx`:`Appendix_시공사개요_${rs.length}개사_${today}.docx`;
+    a.download=`${nm.replace(/\(주\)|（주）|주식회사|[㈜()\/\\:*?"<>|]/g,"").trim()}_Appendix_시공사개요_${today}.docx`;
     document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
   }catch(e){ console.error(e); btn.lastChild.textContent="실패 · 다시 시도"; setTimeout(()=>{btn.lastChild.textContent=lb;btn.disabled=false;},2500); return; }
   btn.disabled=false; btn.lastChild.textContent=lb;
@@ -1500,6 +1500,7 @@ function bindCost(){
 // ---------- 공통 바인딩 ----------
 document.addEventListener("click",e=>{
   const ca=e.target.closest('a[href="#cost"]'); if(ca){ e.preventDefault(); const f=$("#cost-fold"); f.open=true; f.scrollIntoView({behavior:"smooth",block:"start"}); return; }
+  const d=e.target.closest(".docb"); if(d&&d.dataset.reg&&BYREG[d.dataset.reg]){ e.preventDefault(); appendixDownload(d,BYREG[d.dataset.reg]); return; }
   const b=e.target.closest(".cob"); if(b&&b.dataset.reg){ e.preventDefault(); openCo(b.dataset.reg); }
 });
 document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("#drawer").hidden) closeCo(); });
@@ -1512,7 +1513,7 @@ bindFeed(); bindCost();
   renderStatus(S);
   if(!D||!D.rows){
     $("#kpis").innerHTML='<div class="placeholder">데이터를 불러오지 못했습니다. 새로고침해 보세요.</div>';
-    $("#tbody").innerHTML='<tr><td colspan="8" class="empty">데이터를 불러오지 못했습니다.</td></tr>';
+    $("#tbody").innerHTML='<tr><td colspan="9" class="empty">데이터를 불러오지 못했습니다.</td></tr>';
     $("#updated").textContent="데이터 없음"; $("#feed-list").innerHTML='<div class="fempty">데이터를 불러오지 못했습니다.</div>'; return;
   }
   ROWS=D.rows.map(r=>({...r,mv:r.prev!=null?r.prev-r.rank:null}));

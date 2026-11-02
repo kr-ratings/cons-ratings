@@ -15,7 +15,7 @@
 | `collector/agency_ids.json` | 회사별 평가사 기업코드 매핑 (등록번호 기준) |
 | `collector/news.py` · `news_names.json` | 회사별 기사 검색(구글 뉴스 RSS, 제목·출처·링크만)과 검색용 이름 |
 | `collector/dart.py` · `dart_ids.json` | DART 주요 공시·재무 요약(환경변수 `DART_API_KEY`)과 회사별 DART 고유번호 |
-| `appendix-template.docx` | 상세 화면과 순위 표 위의 '심의서 Appendix(워드)' 버튼이 쓰는 워드 양식(본문 자리 {{BODY}}에 표를 채움) |
+| `appendix-template.docx` | 상세 화면 '심의서 Appendix(워드)' 버튼과 순위 표 맨 오른쪽 '워드' 버튼이 쓰는 워드 양식(본문 자리 {{BODY}}에 표를 채움) |
 | `collector/backlog.py` | 수주 현황 · 보증·약정 현황 — 정기보고서 '수주상황' · '우발부채 등에 관한 사항', 감사보고서 주석 원문 표 |
 | `collector/cost.py` | 건설공사비지수(한국건설기술연구원) |
 | `collector/events.py` | 직전 수집과 비교한 등급·Outlook·시평 변동 기록 |
