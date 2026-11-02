@@ -1146,7 +1146,7 @@ const WX={
   },
   h(t){ return WX.p(t,{b:1,spacing:'<w:spacing w:before="160" w:after="40"/>'}); },
   note(t){ return WX.p(t,{jc:"right",sz:16,spacing:'<w:spacing w:after="20"/>'}); },
-  sub(t){ return WX.p(t,{b:1,sz:18,spacing:'<w:spacing w:before="100" w:after="20"/>'}); },
+  sub(t){ return WX.p("- "+String(t).replace(/^\s*[-–·]\s*/,""),{b:1,sz:18,spacing:'<w:spacing w:before="100" w:after="20"/>'}); },
   // cells: [{t, kind:'head'|'label'|'sum'|'', jc, span}] · widths(dxa)
   table(widths, rows, o={}){
     const W=widths.reduce((a,b)=>a+b,0), sz=o.sz||null, bd='w:val="single" w:sz="4" w:space="0" w:color="auto"';
@@ -1304,7 +1304,7 @@ function appendixXML(r){
       const amtCol=P.map((p,j)=>j>0&&!/일자$|일$|기간$|건수|수량|율|%|비고|연도|년도/.test(leafOf(p))&&!/건수|율|%/.test(p.join("")));
       const conv=(v,j)=>{ if(!div||!amtCol[j]) return v; const s2=String(v).replace(/\s/g,""); if(!/^\(?[-△]?[\d,]+\)?$/.test(s2)||!/\d{3}/.test(s2)) return v;
         const n=+s2.replace(/[(),△-]/g,""), neg=/^\(|^[-△]/.test(s2); return wn((neg?-1:1)*n/div); };
-      const cap=String(t.cap||"제공한 보증 · 약정").replace(/^\s*(?:[가-하]\.|\(?\d+\)|\d+\.)\s*/,"");
+      const cap=String(t.cap||"제공한 보증 · 약정").replace(/^\s*(?:[가-하]\.|\(?\d+(?:-\d+)?\)|\d+\.|[①-⑳])\s*/,"");
       out.push(WX.sub(cap), WX.note(div?"(단위: 억원)":`(단위: ${t.unit||"원문 단위"})`));
       const n=P.length, body=rows0.map(rw=>Array.from({length:n},(_,j)=>conv(rw[j]??"",j)));
       const head=[], leafSpan={}; // 같은 이름이 잇단 맨 아래 머리글(예: 구분 | 구분)은 한 칸으로 합친다
