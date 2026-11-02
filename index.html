@@ -448,7 +448,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
     <div class="sec-head">
       <span class="key"><span>등급 옆 날짜는 최근 평가일</span><span class="o"><i>'24.05.23</i> 평가 후 1년 경과</span><span><span class="kd" style="margin:0">ICR</span> <span class="kd" style="margin:0">CP</span> 회사채 등급이 없을 때 대신 표시</span><span><span class="ol pos">긍정적</span> <span class="ol neg">부정적</span> Outlook(안정적은 생략)</span><span>등급을 누르면 평가사 기업 페이지가 열립니다</span></span>
     </div>
-    <div class="co-hint" role="note"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.9v.1"/></svg>회사명을 누르면 시공사별 상세 화면이 열립니다<span>회사 개요 · 주주 현황 · 재무 요약(5개년) · 수주 현황 · 보증·약정 · 신용등급 이력 · 최근 공시 · 기사</span></div>
+    <div class="co-hint" role="note"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.9v.1"/></svg>회사명을 누르면 시공사별 상세 화면이 열립니다<span>회사 개요 · 주주 현황 · 재무 요약(5개년) · 수주 현황 · 보증·약정 · 신용등급 이력 · 최근 공시 · 기사 · 심의서 Appendix(워드)</span></div>
     <div class="filters">
       <div class="seg" role="group" aria-label="순위 구간" id="seg-band">
         <button type="button" data-v="all" aria-pressed="true">전체</button>
@@ -926,6 +926,7 @@ function openCo(reg,push=true){
   $("#xl-ord")?.addEventListener("click",e=>blXLSX(e.currentTarget,r,"ord"));
   $("#xl-cg")?.addEventListener("click",e=>blXLSX(e.currentTarget,r,"cg"));
   blBind($("#drawer"));
+  $("#dr-doc").addEventListener("click",e=>appendixDownload(e.currentTarget,r));
   $("#dr-link").addEventListener("click",()=>copyText(`${location.origin}${location.pathname}#co=${encodeURIComponent(reg)}`,"이 회사 링크를 복사했습니다"));
 }
 // 상세 화면의 주주 현황 · 재무 요약 엑셀
@@ -1114,6 +1115,209 @@ function blBind(root){
     [...tb.rows].sort((a,b)=>desc?v(b)-v(a):v(a)-v(b)).forEach(tr=>tb.appendChild(tr));
   }));
 }
+// ---------- 심의서 Appendix(워드) ----------
+// 양식 파일(appendix-template.docx)의 본문 자리에 회사 개요 · 주주 · 재무 · 수주 · 보증·약정 표를 채운다
+function loadJSZip(){
+  if(window.JSZip) return Promise.resolve();
+  return new Promise((ok,fail)=>{ const s=document.createElement("script");
+    s.src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"; s.onload=ok; s.onerror=fail; document.head.appendChild(s); });
+}
+const WX={
+  x:s=>String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"),
+  font:'<w:rFonts w:asciiTheme="minorHAnsi" w:eastAsiaTheme="minorHAnsi" w:hAnsiTheme="minorHAnsi"/>',
+  rpr(o={}){ return `<w:rPr>${WX.font}${o.b?"<w:b/><w:bCs/>":""}${o.color?`<w:color w:val="${o.color}"/>`:""}${o.sz?`<w:sz w:val="${o.sz}"/><w:szCs w:val="${o.sz}"/>`:""}</w:rPr>`; },
+  run(t,o={}){ return `<w:r>${WX.rpr(o)}<w:t xml:space="preserve">${WX.x(t)}</w:t></w:r>`; },
+  p(t,o={}){ // 문단 하나(줄바꿈 없음)
+    const sp=o.spacing||"";
+    return `<w:p><w:pPr>${sp}${o.jc?`<w:jc w:val="${o.jc}"/>`:""}${WX.rpr(o)}</w:pPr>${t===""?"":WX.run(t,o)}</w:p>`;
+  },
+  gap(sz=4){ return `<w:p><w:pPr><w:spacing w:after="0" w:line="${sz*10}" w:lineRule="exact"/><w:rPr>${WX.font}<w:sz w:val="${sz}"/></w:rPr></w:pPr></w:p>`; },
+  title(t){ // 양식의 '# Appendix' 제목 띠
+    const b='w:val="single" w:sz="12" w:space="0" w:color="1F497D"';
+    return `<w:tbl><w:tblPr><w:tblW w:w="5016" w:type="pct"/><w:tblBorders><w:bottom ${b}/></w:tblBorders><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid><w:gridCol w:w="574"/><w:gridCol w:w="9648"/></w:tblGrid>
+<w:tr><w:trPr><w:trHeight w:val="44"/></w:trPr><w:tc><w:tcPr><w:tcW w:w="281" w:type="pct"/><w:tcBorders><w:top ${b}/><w:left ${b}/><w:bottom ${b}/><w:right ${b}/></w:tcBorders><w:shd w:val="clear" w:color="auto" w:fill="1F497D"/><w:tcMar><w:top w:w="0" w:type="dxa"/><w:left w:w="0" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="0" w:type="dxa"/></w:tcMar><w:vAlign w:val="center"/></w:tcPr>${WX.p("#",{jc:"center",b:1,color:"FFFFFF",sz:28})}</w:tc>
+<w:tc><w:tcPr><w:tcW w:w="4719" w:type="pct"/><w:tcBorders><w:left ${b}/><w:bottom ${b}/></w:tcBorders><w:vAlign w:val="center"/></w:tcPr><w:p><w:pPr>${WX.rpr({b:1,color:"1F497D",sz:28})}</w:pPr>${WX.run(" "+t,{b:1,color:"1F497D",sz:28})}</w:p></w:tc></w:tr></w:tbl>`;
+  },
+  h(t){ return WX.p(t,{b:1,spacing:'<w:spacing w:before="160" w:after="40"/>'}); },
+  note(t){ return WX.p(t,{jc:"right",sz:16,spacing:'<w:spacing w:after="20"/>'}); },
+  sub(t){ return WX.p(t,{b:1,sz:18,spacing:'<w:spacing w:before="100" w:after="20"/>'}); },
+  // cells: [{t, kind:'head'|'label'|'sum'|'', jc, span}] · widths(dxa)
+  table(widths, rows, o={}){
+    const W=widths.reduce((a,b)=>a+b,0), sz=o.sz||null, bd='w:val="single" w:sz="4" w:space="0" w:color="auto"';
+    const tr=(cells,ri)=>{
+      let ci=0;
+      const tcs=cells.map(c=>{
+        const span=c.span||1, w=widths.slice(ci,ci+span).reduce((a,b)=>a+b,0), first=ci===0; ci+=span; const last=ci>=widths.length;
+        const fill=c.kind==="head"?"1F497D":(c.kind==="label"||c.kind==="sum")?"DBE5F1":null;
+        const ro={b:c.kind&&c.kind!=="",color:c.kind==="head"?"FFFFFF":"000000",sz:c.sz||sz};
+        const lines=String(c.t??"").split("\n");
+        return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${span>1?`<w:gridSpan w:val="${span}"/>`:""}<w:tcBorders><w:top ${bd}/>${first?'<w:left w:val="nil"/>':`<w:left ${bd}/>`}<w:bottom ${bd}/>${last?'<w:right w:val="nil"/>':`<w:right ${bd}/>`}</w:tcBorders>${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:""}<w:vAlign w:val="center"/></w:tcPr>${
+          lines.map(l=>`<w:p><w:pPr><w:spacing w:after="0" w:line="${o.line||260}" w:lineRule="auto"/><w:jc w:val="${c.jc||"center"}"/>${WX.rpr(ro)}</w:pPr>${l===""?"":WX.run(l,ro)}</w:p>`).join("")}</w:tc>`;
+      }).join("");
+      const head=cells.some(c=>c.kind==="head");
+      return `<w:tr><w:trPr>${head?"<w:tblHeader/>":""}<w:cantSplit/><w:trHeight w:val="${o.h||(sz&&sz<20?300:420)}"/></w:trPr>${tcs}</w:tr>`;
+    };
+    return `<w:tbl><w:tblPr><w:tblW w:w="${W}" w:type="dxa"/><w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="70" w:type="dxa"/><w:right w:w="70" w:type="dxa"/></w:tblCellMar><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>${widths.map(w=>`<w:gridCol w:w="${w}"/>`).join("")}</w:tblGrid>${rows.map(tr).join("")}</w:tbl>`;
+  }
+};
+const W_FULL=10202;
+// 숫자: 천단위 쉼표, 음수는 괄호(양식과 같게)
+const wn=(v,d)=>{ if(v==null||isNaN(v)) return "-"; const dd=d??(Math.abs(v)<100&&Math.round(v)!==v?1:0);
+  const s=Math.abs(v).toLocaleString("ko-KR",{minimumFractionDigits:dd,maximumFractionDigits:dd}); return v<0?`(${s})`:s; };
+const wp=v=>v==null||isNaN(v)?"-":(v<0?`(${Math.abs(v).toFixed(1)})`:v.toFixed(1));
+const wd=s=>String(s||"").replace(/\s+/g,"").replace(/[-/년월]/g,".").replace(/일$/,"").replace(/\.+$/,"").replace(/^(?:19|20)(\d{2}\.\d{1,2})/,"$1"); // 양식처럼 yy.mm(.dd)
+const wclean=s=>String(s||"").replace(/\(\*+\d*\)|\*+\d*$/g,"").replace(/\s+/g," ").trim();
+const H=t=>({t,kind:"head"}), L=t=>({t,kind:"label"}), V=(t,jc)=>({t,jc}), N=v=>({t:v,jc:"right"}), S=(t,jc)=>({t,kind:"sum",jc});
+function wPer(p){ // 재무 열 머리글 2025(12) · 2026(06)
+  if(p.t==="FY") return `${p.p}(12)${p.b?"*":""}`;
+  const m=String(p.p).match(/(\d{4})\s*(1Q|1H|3Q|Q1|H1|Q3)/i), mm={"1Q":"03","Q1":"03","1H":"06","H1":"06","3Q":"09","Q3":"09"};
+  return m?`${m[1]}(${mm[m[2].toUpperCase()]})`:String(p.p);
+}
+function appendixXML(r){
+  const reg=regOf(r), dc=DART&&DART.co&&DART.co[reg], i=(dc&&dc.info)||{}, b=blOf(reg), out=[];
+  const nm=i.nm||r.name;
+  out.push(WX.gap(2), WX.title("Appendix. 시공사 개요"), WX.gap(4));
+  // 1. 회사 개요
+  out.push(WX.h("1. 회사 개요"));
+  const est=i.est&&/^\d{8}$/.test(i.est)?`${i.est.slice(0,4)}년 ${i.est.slice(4,6)}월 ${i.est.slice(6)}일`:"-";
+  const bg=AG.map(a=>({a,...(r.ratings[a]||{}),kind:(r.ratings[a]||{}).kind||"bond"})).filter(x=>x.grade).sort((x,y)=>gi(x)-gi(y))[0];
+  const rt=bg?`${bg.grade}${bg.kind!=="bond"?` ${KINDS[bg.kind]}`:""}(${AGF[bg.a]}${bg.date?` / ${bg.date.replace(/-/g,".")}`:""})`:"공시 등급 없음";
+  out.push(WX.table([1418,3118,2410,3256],[
+    [H("구 분"),H("내 용"),H("구 분"),H("내 용")],
+    [L("회사명"),V(nm),L("대표이사"),V((i.ceo||"-").replace(/\s*,\s*/g,", "))],
+    [L("설립일"),V(est),L("업종"),V(ksic(i.ind))],
+    [L("신용등급"),V(rt),L("도급순위"),V(`${r.rank}위 (${META.year}년 기준)`)],
+    [L("주소"),{t:i.adres||"-",span:3}],
+  ]));
+  // 2. 주주 현황
+  out.push(WX.h("2. 주주 현황"));
+  const sh=dc&&dc.sh;
+  if(sh){
+    out.push(WX.note(`(단위: %, ${sh.asof?`기준일: ${sh.asof.replace(/-/g,".")}, `:""}출처: Dart 공시 ${sh.src||""}, 보통주 기준)`));
+    // 비고 열은 공란(심의서에서 직접 쓰는 칸)
+    const hasRel=sh.list.some(x=>x.rel), w=hasRel?[3300,2900,1600,2402]:[4600,1800,3802];
+    const rows=[hasRel?[H("주주명"),H("관계"),H("지분율"),H("비고")]:[H("주주명"),H("지분율"),H("비고")]];
+    const row=(a,rel,v,k)=>hasRel?[k?S(a):V(a),k?S(""):V(rel||""),k?S(wp(v),"right"):N(wp(v)),k?S(""):V("")]:[k?S(a):V(a),k?S(wp(v),"right"):N(wp(v)),k?S(""):V("")];
+    sh.list.forEach(x=>rows.push(row(x.nm,(x.rel||"").replace(/\n/g," "),x.pct)));
+    if(sh.treasury) rows.push(row("자기주식","",sh.treasury));
+    if(sh.etc) rows.push(row("기타","",sh.etc));
+    rows.push(row("합계","",100,1));
+    out.push(WX.table(w,rows));
+  } else out.push(WX.p("감사보고서와 DART 공시에 주주별 지분 구성이 공개되어 있지 않습니다.",{sz:18}));
+  // 3. 요약 재무제표
+  out.push(WX.h("3. 요약 재무제표"));
+  const f=dc&&dc.fin, ps=finPeriods(f);
+  if(ps.length){
+    out.push(WX.note(`(단위: 억원, %, 기준: ${f.basis}, 출처: Dart 공시${f.src&&f.src!=="사업보고서"?` ${f.src}`:""})`));
+    const cw=Math.floor((W_FULL-1418)/ps.length), widths=[1418,...ps.map((_,k)=>k<ps.length-1?cw:W_FULL-1418-cw*(ps.length-1))];
+    const K=[["매출액","rev",wn],["영업이익","op",wn],["당기순이익","ni",wn],["총자산","assets",wn],["총부채","liab",wn],["총자본","equity",wn],["영업이익률","opm",wp],["부채비율","dr",wp]];
+    out.push(WX.table(widths,[[H("구 분"),...ps.map(p=>H(wPer(p)))],...K.map(([lb,k,fm])=>[L(lb),...ps.map(p=>N(fm(p[k])))])]));
+    const notes=[];
+    if(ps.some(p=>p.t!=="FY")) notes.push("분기·반기 열은 해당 연도 누적 실적과 분기말 재무상태");
+    if(ps.some(p=>p.b)) notes.push("* 표시 연도는 "+[...new Set(ps.filter(p=>p.b).map(p=>p.b))].join("·")+" 기준");
+    notes.push("부채비율 = 총부채 ÷ 총자본");
+    out.push(WX.p("주) "+notes.join(" / "),{sz:16,spacing:'<w:spacing w:before="40"/>'}));
+  } else out.push(WX.p("DART에서 이 회사의 재무를 찾지 못했습니다.",{sz:18}));
+  // 4. 수주 현황
+  const src=b?`Dart 공시 ${b.kind==="aud"?"":""}${b.nm||""}`:"Dart 공시";
+  out.push(WX.h(`4. 수주 현황${b&&b.asof?` (${b.asof.replace(".","년 ")}월말 기준)`:""}`));
+  const o=b&&b.ord;
+  if(o&&o.kind==="list"){
+    const R=ordRows(o).sort((a,c)=>(c.rem??-1)-(a.rem??-1)), Sm=o.sum;
+    out.push(WX.note(`(단위: 억원, 출처: ${src} 수주상황, 현장 ${R.length}개 전체)`));
+    const w=[900,2550,1900,950,950,1000,1000,952];
+    const rows=[[H("구분"),H("공사명"),H("발주처"),H("계약일"),H("완공예정"),H("도급액"),H("계약잔액"),H("기성률")]];
+    R.forEach(x=>rows.push([V(x.g||""),V(x.nm||x.own||"","left"),V(x.own&&x.own!==x.nm?x.own:"","left"),V(wd(x.cd)),V(wd(x.ed)),N(wn(x.amt)),N(wn(x.rem)),N(x.pr==null?"-":Math.min(100,x.pr).toFixed(0)+"%")]));
+    rows.push([S("합계",undefined),S(""),S(""),S(""),S(""),S(Sm.amt?wn(Sm.amt):"","right"),S(wn(Sm.rem),"right"),S(Sm.amt&&Sm.done?Math.min(100,Sm.done/Sm.amt*100).toFixed(0)+"%":"","right")]);
+    rows[rows.length-1]=[{t:"합계",kind:"sum",span:5},rows[rows.length-1][5],rows[rows.length-1][6],rows[rows.length-1][7]];
+    out.push(WX.table(w,rows,{sz:16,line:220}));
+    out.push(WX.p("주) 원문 수주상황 표의 현장 전체이며 합계는 표에 실린 현장 기준 / 기성률 = 기성(완성공사액) ÷ 도급액",{sz:16,spacing:'<w:spacing w:before="40"/>'}));
+  } else if(o){
+    const ks=[["amt","총도급액"],["beg","기초 잔액"],["new","신규·증감"],["rev","수익 인식"],["end","기말 잔액"]].filter(([k])=>o.rows.some(x=>x[k]!=null));
+    out.push(WX.note(`(단위: 억원, 출처: Dart 공시 ${b.nm||"감사보고서"} 주석 공사계약 잔액)`));
+    const lw=3400, cw=Math.floor((W_FULL-lw)/ks.length), w=[lw,...ks.map((_,k)=>k<ks.length-1?cw:W_FULL-lw-cw*(ks.length-1))];
+    const rows=[[H("구분"),...ks.map(k=>H(k[1]))],...o.rows.map(x=>[V(x.nm,"left"),...ks.map(([k])=>N(wn(x[k])))])];
+    if(o.rows.length>1) rows.push([S("합계"),...ks.map(([k])=>S(wn(o.sum[k]),"right"))]);
+    out.push(WX.table(w,rows,{sz:16,line:220}));
+  } else out.push(WX.p(b?"최근 원문에 현장별 수주 표가 없습니다.":"DART에서 이 회사의 수주 자료를 찾지 못했습니다.",{sz:18}));
+  // 5. 보증·약정 현황
+  out.push(WX.h(`5. 보증·약정 현황${b&&b.asof?` (${b.asof.replace(".","년 ")}월말 기준)`:""}`));
+  const c=b&&b.cg;
+  if(c){
+    // 요약표: 유형별 건수 · 금액을 칸마다 따로
+    const sm=c.sum||{}, Ls=[], sum=(xs,k)=>xs.some(x=>x[k]!=null)?xs.reduce((a,x)=>a+(x[k]||0),0):null;
+    if(c.pf) Ls.push(["부동산 PF 보증",{n:c.pf.length,lim:sum(c.pf,"lim"),amt:c.pf.reduce((a,x)=>a+(x.amt??x.lim??0),0),loan:c.pf_sum.loan}]);
+    if(c.spc) Ls.push(["유동화증권 신용보강",{n:c.spc.length,loan:c.spc_sum}]);
+    if(sm.cmpl) Ls.push(["책임준공 약정",sm.cmpl]);
+    if(sm.mid) Ls.push(["중도금대출 보증",sm.mid]);
+    if(sm.soc) Ls.push(["SOC 사업 보증",sm.soc]);
+    if(Ls.length){
+      out.push(WX.note(`(단위: 억원, 건, 출처: ${src} 우발부채 등에 관한 사항)`));
+      const ks=[["n","건수"],["lim","보증한도"],["amt","보증금액"],["loan","대출잔액"],["contract","도급금액"],["cmplamt","약정금액"]];
+      out.push(WX.table([2152,950,1420,1420,1420,1420,1420],[[H("구 분"),...ks.map(([,l])=>H(l))],
+        ...Ls.map(([a,v])=>[L(a),...ks.map(([k])=>N(v[k]==null?"-":k==="n"?Math.round(v[k]).toLocaleString("ko-KR"):wn(v[k])))])]));
+      const fn=[];
+      if(c.spc) fn.push("유동화증권 신용보강의 대출잔액은 증권 미상환잔액");
+      if(sm.cmpl) fn.push("책임준공 약정의 대출잔액은 책임준공 약정 관련 대출잔액, 약정금액은 책임준공 약정금액");
+      if(fn.length) out.push(WX.p("주) "+fn.join(" / "),{sz:16,spacing:'<w:spacing w:before="40"/>'}));
+    }
+    if(c.pf){
+      const R=[...c.pf].sort((a,d)=>(d.amt??d.lim??0)-(a.amt??a.lim??0));
+      out.push(WX.sub(`부동산 PF 보증 사업장별 (${R.length}개)`), WX.note("(단위: 억원)"));
+      const w=[1050,1000,1050,1850,950,1150,1000,1050,1102];
+      const rows=[[H("사업지역"),H("사업장구분"),H("신용보강"),H("차주"),H("대주"),H("만기"),H("보증한도"),H("보증금액"),H("대출잔액")]];
+      R.forEach(x=>rows.push([V(wclean(x.region)||(x.grp||"")),V(wclean(x.use)===wclean(x.region)?"":wclean(x.use)),V([...new Set([wclean(x.pf),wclean(x.kind)].filter(Boolean))].join("\n")),V(x.debtor||"","left"),V(x.lender||""),V(wd(x.mat)||x.mat||""),N(wn(x.lim)),N(wn(x.amt)),N(wn(x.loan))]));
+      rows.push([{t:"합계",kind:"sum",span:6},S(wn(c.pf.reduce((s,x)=>s+(x.lim||0),0)),"right"),S(wn(c.pf_sum.amt||null),"right"),S(wn(c.pf_sum.loan),"right")]);
+      out.push(WX.table(w,rows,{sz:16,line:220}));
+    }
+    if(c.spc){
+      out.push(WX.sub(`유동화증권 신용보강 (${c.spc.length}건)`), WX.note("(단위: 억원)"));
+      const w=[2600,1000,1500,1400,1100,1300,1302];
+      const rows=[[H("발행회사"),H("증권종류"),H("사업장"),H("신용보강"),H("발행일"),H("발행금액"),H("미상환잔액")]];
+      [...c.spc].sort((a,d)=>(d.bal||0)-(a.bal||0)).forEach(x=>rows.push([V(x.spc||"","left"),V(x.sec||""),V(x.use||""),V(x.kind||""),V(wd(x.issued)||x.issued||""),N(wn(x.iss)),N(wn(x.bal))]));
+      rows.push([{t:"합계",kind:"sum",span:6},S(wn(c.spc_sum),"right")]);
+      out.push(WX.table(w,rows,{sz:16,line:220}));
+    }
+    (c.raw||[]).forEach(t=>{
+      // 원문 단위(원 · 천원 · 백만원)의 금액은 억원으로 바꾼다 — 날짜 · 건수 · 비율 열은 그대로
+      const div={"원":1e8,"천원":1e5,"백만원":1e2,"억원":1}[t.unit]||null;
+      const amtCol=t.cols.map(h=>!/일자|일$|기간|만기|건수|수량|율|%|년|월|비고|구분|명$|자$/.test(h.replace(/\s/g,"")));
+      const conv=(v,j)=>{ if(!div||!amtCol[j]) return v; const s2=String(v).replace(/\s/g,""); if(!/^\(?[-△]?[\d,]+\)?$/.test(s2)||!/\d{3}/.test(s2)) return v;
+        const n=+s2.replace(/[(),△-]/g,""), neg=/^\(|^[-△]/.test(s2); return wn((neg?-1:1)*n/div); };
+      const cap=String(t.cap||"제공한 보증 · 약정").replace(/^\s*(?:[가-하]\.|\(?\d+\)|\d+\.)\s*/,"");
+      out.push(WX.sub(cap), WX.note(div?"(단위: 억원)":`(단위: ${t.unit||"원문 단위"})`));
+      t={...t, rows:t.rows.map(rw=>rw.map((v,j)=>conv(v,j)))};
+      const n=t.cols.length, first=Math.min(2600,Math.round(W_FULL*0.26)), cw=Math.floor((W_FULL-first)/Math.max(1,n-1));
+      const w=n===1?[W_FULL]:[first,...Array.from({length:n-1},(_,k)=>k<n-2?cw:W_FULL-first-cw*(n-2))];
+      const isNum=v=>/\d/.test(v)&&/^[\d,.()\-△▲%\s]+$/.test(v);
+      out.push(WX.table(w,[t.cols.map(x=>H(x)),...t.rows.map(rw=>Array.from({length:n},(_,j)=>{const v=rw[j]??""; return isNum(v)?N(v):V(v,j===0?"left":"center");}))],{sz:16,line:220}));
+    });
+    out.push(WX.p("주) 회사가 타인을 위하여 제공한 보증·약정만 기재(소송·담보·제공받은 보증 제외)",{sz:16,spacing:'<w:spacing w:before="40"/>'}));
+  } else out.push(WX.p(b?"최근 원문에 타인을 위하여 제공한 보증·약정 표가 없습니다.":"DART에서 이 회사의 자료를 찾지 못했습니다.",{sz:18}));
+  return out.join("");
+}
+async function appendixDOCX(r){
+  await loadJSZip();
+  const tpl=await (await fetch("appendix-template.docx",{cache:"no-store"})).arrayBuffer();
+  const z=await JSZip.loadAsync(tpl);
+  const doc=await z.file("word/document.xml").async("string");
+  z.file("word/document.xml",doc.replace("{{BODY}}",appendixXML(r)));
+  const now=new Date().toISOString().replace(/\.\d+Z$/,"Z");
+  const core=await z.file("docProps/core.xml").async("string");
+  z.file("docProps/core.xml",core.replace(/<dc:title>.*?<\/dc:title>/,`<dc:title>${WX.x("Appendix. 시공사 개요 - "+r.name)}</dc:title>`).replace(/(<dcterms:created[^>]*>).*?(<\/dcterms:created>)/,`$1${now}$2`).replace(/(<dcterms:modified[^>]*>).*?(<\/dcterms:modified>)/,`$1${now}$2`));
+  return z.generateAsync({type:"blob",mimeType:"application/vnd.openxmlformats-officedocument.wordprocessingml.document",compression:"DEFLATE"});
+}
+async function appendixDownload(btn,r){
+  const lb=btn.lastChild.textContent; btn.disabled=true; btn.lastChild.textContent="만드는 중…";
+  try{
+    const bl=await appendixDOCX(r), dc=DART&&DART.co&&DART.co[regOf(r)], nm=(dc&&dc.info&&dc.info.nm)||r.name;
+    const today=new Date(Date.now()+9*3600e3).toISOString().slice(0,10).replace(/-/g,"");
+    const a=document.createElement("a"); a.href=URL.createObjectURL(bl);
+    a.download=`${nm.replace(/\(주\)|（주）|주식회사|[㈜()\/\\:*?"<>|]/g,"").trim()}_Appendix_시공사개요_${today}.docx`;
+    document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},2000);
+  }catch(e){ console.error(e); btn.lastChild.textContent="실패 · 다시 시도"; setTimeout(()=>{btn.lastChild.textContent=lb;btn.disabled=false;},2500); return; }
+  btn.disabled=false; btn.lastChild.textContent=lb;
+}
 async function blXLSX(btn,r,what){
   const reg=regOf(r), b=blOf(reg), dc=DART&&DART.co&&DART.co[reg]; if(!b) return;
   const lb=btn.lastChild.textContent; btn.disabled=true; btn.lastChild.textContent="만드는 중…";
@@ -1196,7 +1400,8 @@ function coHTML(r){
       <button type="button" class="xbtn" id="dr-x" aria-label="닫기">×</button></div>
     <div class="dr-b">
       <div class="acts"><button type="button" class="dl" id="dr-star" aria-pressed="${WATCH.has(reg)}">${WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"}</button>
-        <button type="button" class="dl" id="dr-link">링크 복사</button></div>
+        <button type="button" class="dl" id="dr-link">링크 복사</button>
+        <button type="button" class="dl" id="dr-doc" title="회사 개요 · 주주 · 요약 재무제표 · 수주 · 보증·약정을 심의서 Appendix 양식의 워드 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>심의서 Appendix(워드)</button></div>
       <div class="card"><h3>회사 개요 <span>DART 기업개황</span></h3>${overviewHTML(r,dc)}</div>
       <div class="card"><h3>주주 현황 ${dc&&dc.sh?`<button type="button" class="xlb" id="xl-sh" title="주주 현황을 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`:""}</h3>${holdersHTML(dc)}</div>
       <div class="card"><h3>재무 요약 <span class="h3r">${dc?`<a href="${dartCo}" target="_blank" rel="noopener">DART 공시 검색 →</a>`:""}${ps.length?`<button type="button" class="xlb" id="xl-fin" title="재무 요약을 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`:""}</span></h3>${fin}</div>

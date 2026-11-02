@@ -63,7 +63,7 @@ jobs:
           mkdir -p _site
           cp index.html _site/
           cp -r data _site/
-          cp og.png robots.txt sitemap.xml _site/ 2>/dev/null || true
+          cp og.png robots.txt sitemap.xml appendix-template.docx _site/ 2>/dev/null || true
 
       # GitHub Pages 배포. Cloudflare Pages만 쓰는 경우를 대비해 실패해도 넘어간다.
       - uses: actions/configure-pages@v5
