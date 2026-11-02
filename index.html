@@ -1156,8 +1156,8 @@ const WX={
         const span=c.span||1, w=widths.slice(ci,ci+span).reduce((a,b)=>a+b,0), first=ci===0; ci+=span; const last=ci>=widths.length;
         const fill=c.kind==="head"?"1F497D":(c.kind==="label"||c.kind==="sum")?"DBE5F1":null;
         const ro={b:c.kind&&c.kind!=="",color:c.kind==="head"?"FFFFFF":"000000",sz:c.sz||sz};
-        const lines=String(c.t??"").split("\n");
-        return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${span>1?`<w:gridSpan w:val="${span}"/>`:""}<w:tcBorders><w:top ${bd}/>${first?'<w:left w:val="nil"/>':`<w:left ${bd}/>`}<w:bottom ${bd}/>${last?'<w:right w:val="nil"/>':`<w:right ${bd}/>`}</w:tcBorders>${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:""}<w:vAlign w:val="center"/></w:tcPr>${
+        const lines=c.vm==="cont"?[""]:String(c.t??"").split("\n");
+        return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${span>1?`<w:gridSpan w:val="${span}"/>`:""}${c.vm==="restart"?'<w:vMerge w:val="restart"/>':c.vm==="cont"?"<w:vMerge/>":""}<w:tcBorders><w:top ${bd}/>${first?'<w:left w:val="nil"/>':`<w:left ${bd}/>`}<w:bottom ${bd}/>${last?'<w:right w:val="nil"/>':`<w:right ${bd}/>`}</w:tcBorders>${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:""}<w:vAlign w:val="center"/></w:tcPr>${
           lines.map(l=>`<w:p><w:pPr><w:spacing w:after="0" w:line="${o.line||260}" w:lineRule="auto"/><w:jc w:val="${c.jc||"center"}"/>${WX.rpr(ro)}</w:pPr>${l===""?"":WX.run(l,ro)}</w:p>`).join("")}</w:tc>`;
       }).join("");
       const head=cells.some(c=>c.kind==="head");
@@ -1287,16 +1287,47 @@ function appendixXML(r){
     (c.raw||[]).forEach(t=>{
       // 원문 단위(원 · 천원 · 백만원)의 금액은 억원으로 바꾼다 — 날짜 · 건수 · 비율 열은 그대로
       const div={"원":1e8,"천원":1e5,"백만원":1e2,"억원":1}[t.unit]||null;
-      const amtCol=t.cols.map(h=>!/일자|일$|기간|만기|건수|수량|율|%|년|월|비고|구분|명$|자$/.test(h.replace(/\s/g,"")));
+      // 머리글 '대출잔액/만기구분/3개월이내' → 여러 줄 머리글(위 칸은 묶고, 아래 칸에 세부 기간)
+      const fnote=x=>String(x??"").replace(/\(\s*\*\s*\d*\s*\)|\*\d+$/g,"").trim(); // 원문 각주 표시(*1) 제거 — 각주는 싣지 않으므로
+      let P=t.cols.map(c=>String(c).replace(/\(?\s*단\s*위\s*[:：][^)/]*\)?/g,"").split("/").map(x=>fnote(x)).filter(Boolean)), rows0=t.rows.map(r=>r.map(fnote));
+      const lastP=P.map(p=>p[p.length-1]||"");
+      if(P.every(p=>p.length>=2)&&lastP.filter(x=>/^[-–]$|^[\d,().]+$/.test(x)).length>=P.length/2){ // 첫 데이터 행이 머리글에 붙어 온 경우
+        rows0=[lastP,...rows0]; P=P.map(p=>p.slice(0,-1)); }
+      // 만기 구간 머리글은 짧게: 3개월초과6개월이내 → 3~6개월, 1년초과2년이내 → 1~2년
+      const span_=x=>x.replace(/\s/g,"").replace(/^(\d+)(개월|년)초과(\d+)(개월|년)이내$/,(m,a,u1,c,u2)=>`${a}${u1===u2?"":u1}~${c}${u2}`)
+        .replace(/^(\d+)(개월|년)이내$/,"$1$2 이내").replace(/^(\d+)(개월|년)초과$/,"$1$2 초과");
+      P=P.map(p=>p.length?p.map((x,i)=>i===p.length-1?span_(x):x):[""]);
+      const D=Math.min(3,Math.max(...P.map(p=>p.length)));
+      P=P.map(p=>p.length>D?[...p.slice(0,D-1),p.slice(D-1).join(" ")]:p);
+      const leafOf=p=>p[p.length-1].replace(/\s/g,"");
+      // 금액 열: 맨 아래 머리글이 날짜 · 기간 · 건수 · 비율이 아닌 열(첫 열 제외)
+      const amtCol=P.map((p,j)=>j>0&&!/일자$|일$|기간$|건수|수량|율|%|비고|연도|년도/.test(leafOf(p))&&!/건수|율|%/.test(p.join("")));
       const conv=(v,j)=>{ if(!div||!amtCol[j]) return v; const s2=String(v).replace(/\s/g,""); if(!/^\(?[-△]?[\d,]+\)?$/.test(s2)||!/\d{3}/.test(s2)) return v;
         const n=+s2.replace(/[(),△-]/g,""), neg=/^\(|^[-△]/.test(s2); return wn((neg?-1:1)*n/div); };
       const cap=String(t.cap||"제공한 보증 · 약정").replace(/^\s*(?:[가-하]\.|\(?\d+\)|\d+\.)\s*/,"");
       out.push(WX.sub(cap), WX.note(div?"(단위: 억원)":`(단위: ${t.unit||"원문 단위"})`));
-      t={...t, rows:t.rows.map(rw=>rw.map((v,j)=>conv(v,j)))};
-      const n=t.cols.length, first=Math.min(2600,Math.round(W_FULL*0.26)), cw=Math.floor((W_FULL-first)/Math.max(1,n-1));
-      const w=n===1?[W_FULL]:[first,...Array.from({length:n-1},(_,k)=>k<n-2?cw:W_FULL-first-cw*(n-2))];
+      const n=P.length, body=rows0.map(rw=>Array.from({length:n},(_,j)=>conv(rw[j]??"",j)));
+      const head=[], leafSpan={}; // 같은 이름이 잇단 맨 아래 머리글(예: 구분 | 구분)은 한 칸으로 합친다
+      for(let L=0;L<D;L++){
+        const row=[]; let j=0;
+        while(j<n){
+          const p=P[j];
+          if(p.length<=L){ const sp=leafSpan[j]||1; row.push({t:"",kind:"head",vm:"cont",span:sp}); j+=sp; continue; }
+          if(p.length===L+1){ let k=j+1; while(k<n&&P[k].length===L+1&&P[k].join("/")===p.join("/")) k++;
+            leafSpan[j]=k-j; row.push({t:p[L],kind:"head",span:k-j,vm:L<D-1?"restart":undefined}); j=k; continue; }
+          let k=j+1; const key=p.slice(0,L+1).join("\u0001");
+          while(k<n&&P[k].length>L+1&&P[k].slice(0,L+1).join("\u0001")===key) k++;
+          row.push({t:p[L],kind:"head",span:k-j}); j=k;
+        }
+        head.push(row);
+      }
+      // 열 너비: 내용 길이에 맞춰 나눔(한글은 넓게)
+      const vis=s=>[...String(s)].reduce((a,ch)=>a+(/[가-힣]/.test(ch)?1.7:1),0);
+      const wt=P.map((p,j)=>Math.min(j===0?26:20,Math.max(7,vis(p[p.length-1])*0.6,...body.map(r=>vis(r[j])))));
+      const tot=wt.reduce((a,b)=>a+b,0);
+      const w=wt.map(x=>Math.floor(x/tot*W_FULL)); w[w.length-1]+=W_FULL-w.reduce((a,b)=>a+b,0);
       const isNum=v=>/\d/.test(v)&&/^[\d,.()\-△▲%\s]+$/.test(v);
-      out.push(WX.table(w,[t.cols.map(x=>H(x)),...t.rows.map(rw=>Array.from({length:n},(_,j)=>{const v=rw[j]??""; return isNum(v)?N(v):V(v,j===0?"left":"center");}))],{sz:16,line:220}));
+      out.push(WX.table(w,[...head,...body.map(rw=>rw.map((v,j)=>isNum(v)?N(v):V(v,j===0?"left":"center")))],{sz:16,line:220}));
     });
     out.push(WX.p("주) 회사가 타인을 위하여 제공한 보증·약정만 기재(소송·담보·제공받은 보증 제외)",{sz:16,spacing:'<w:spacing w:before="40"/>'}));
   } else out.push(WX.p(b?"최근 원문에 타인을 위하여 제공한 보증·약정 표가 없습니다.":"DART에서 이 회사의 자료를 찾지 못했습니다.",{sz:18}));
