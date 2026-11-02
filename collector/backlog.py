@@ -603,6 +603,9 @@ def collect(D, co, names_of, prev, today, log=print):
                     src = {**x, "kind": "per"}
             except Exception as e:
                 errors.append(f"정기보고서 목록 {k}: {str(e)[:40]}")
+        if not src and f.get("fy_rcept") and f.get("src") != "감사보고서":  # 최근 400일에 정기보고서가 없는 회사(합병 등)는 재무 요약에 쓴 사업보고서
+            y = max((x["p"] for x in f.get("periods", []) if x.get("t") == "FY"), default="")
+            src = {"no": f["fy_rcept"], "nm": f"사업보고서 ({y}.12)" if y else "사업보고서", "d": "", "kind": "per"}
         if not src:
             a = v.get("audit") or ({"no": f["audit_no"], "nm": f.get("audit_nm", ""), "d": ""} if f.get("audit_no") else None)
             if a:

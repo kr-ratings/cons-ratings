@@ -1016,8 +1016,9 @@ function ordRows(o){
     return {...x, main:gen?x.own:(x.nm||x.own||"–"), sub:gen?(x.nm||""):(x.own||""), pr:x.amt&&x.done!=null?x.done/x.amt*100:null}; });
 }
 function blSrc(b){ return `${b.kind==="per"?"":"감사보고서 "}<a href="${dartUrl(b.no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(b.nm||"원문")}</a>`; }
-function lastRev(reg){ const f=finOf(reg); if(!f||!f.periods) return null; const fy=f.periods.filter(p=>p.t==="FY"&&p.rev).sort((a,b)=>a.p<b.p?-1:1).pop(); return fy?{v:fy.rev,y:fy.p}:null; }
-function lastEq(reg){ const f=finOf(reg); if(!f||!f.periods) return null; const p=[...f.periods].filter(p=>p.equity).sort((a,b)=>(a.t==="FY"?a.p+"-12":a.p)<(b.t==="FY"?b.p+"-12":b.p)?-1:1).pop(); return p?p.equity:null; }
+// 매출 · 자기자본 대비 비율은 재무가 별도 기준일 때만(연결 재무와 회사 자신의 수주 · 보증을 섞지 않게)
+function lastRev(reg){ const f=finOf(reg); if(!f||!f.periods||f.basis!=="별도") return null; const fy=f.periods.filter(p=>p.t==="FY"&&p.rev).sort((a,b)=>a.p<b.p?-1:1).pop(); return fy?{v:fy.rev,y:fy.p}:null; }
+function lastEq(reg){ const f=finOf(reg); if(!f||!f.periods||f.basis!=="별도") return null; const p=[...f.periods].filter(p=>p.equity).sort((a,b)=>(a.t==="FY"?a.p+"-12":a.p)<(b.t==="FY"?b.p+"-12":b.p)?-1:1).pop(); return p?p.equity:null; }
 const flt=n=>n>12?`<input type="search" placeholder="현장·발주처 검색" aria-label="표 안에서 찾기" data-flt>`:"";
 function ordCard(r){
   const reg=regOf(r), b=blOf(reg), xl=`<button type="button" class="xlb" id="xl-ord" title="수주 현황 전체를 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`;
@@ -1037,7 +1038,7 @@ function ordCard(r){
     return `<div class="card">${head}${sum}
       <div class="bl-sub"><span>현장별 수주 (전체 ${R.length}개 · 제목을 누르면 정렬)</span>${flt(R.length)}</div>
       <div class="bl-box"><table class="mini"><thead><tr><th>현장 · 발주처 · 계약기간</th><th class="n" data-k="1">도급액</th><th class="n" data-k="2" aria-sort="descending">계약잔액</th><th class="n" data-k="3">기성률</th></tr></thead><tbody>${rows}</tbody>
-      <tfoot><tr><td>합계</td><td class="n">${eok(S.amt)}</td><td class="n">${eok(S.rem)}</td><td class="n">${S.amt&&S.done!=null?Math.min(100,S.done/S.amt*100).toFixed(0)+"%":""}</td></tr></tfoot></table></div>
+      <tfoot><tr><td>합계</td><td class="n">${S.amt?eok(S.amt):""}</td><td class="n">${eok(S.rem)}</td><td class="n">${S.amt&&S.done?Math.min(100,S.done/S.amt*100).toFixed(0)+"%":""}</td></tr></tfoot></table></div>
       <p class="hint" style="margin-top:6px">출처: ${blSrc(b)}의 수주상황 표에 실린 현장을 모두 옮겼습니다. 합계는 표에 실린 현장 기준이며, 기성률 = 기성(완성공사액) ÷ 도급액입니다.</p></div>`;
   }
   const S=o.sum, R=o.rows, has=k=>R.some(x=>x[k]!=null);
