@@ -17,15 +17,15 @@ from bs4 import BeautifulSoup
 
 import audit_fs
 
-VERSION = 9
+VERSION = 10
 _sp = audit_fs._sp
 
-DEBT = re.compile(r"차입금|사채|리스부채|유동화채무|유동성장기(?:부채|채무)|^장기부채$")  # '유동차입금(사채포함)', '단기차입금및유동성차입금' 같은 이름도
+DEBT = re.compile(r"차입금|차입부채|사채|리스부채|유동화채무|유동성장기(?:부채|채무)|^장기부채$")  # '유동차입금(사채포함)', '단기차입금및유동성차입금' 같은 이름도
 # 주석 표에서는 이름이 정확히 맞는 항목만(합계 · 소계 행과 겹치지 않게)
 DEBT_STRICT = re.compile(r"^(?:유동성|비유동성?|유동|단기|장기)?(?:장기)?(?:차입금|사채|전환사채|교환사채|신주인수권부사채|리스부채|유동화채무|장기부채)$|^유동성장기(?:부채|채무)$")
 FIN_LIAB = re.compile(r"^(?:단기|장기|유동|비유동)금융(?:상품)?부채$")  # 차입금을 금융부채로 묶어 표시한 재무상태표 → 주석에서 차입금 구성을 읽는다
 DEBT_NOT = re.compile(r"할인|할증|조정|상환권|전환권|미지급|이자|보증|충당|대여|채권|자산|미수|선급|발행비|파생|합계|총계|소계|공사채무|청구|선수|예수|임대")
-CASH = re.compile(r"^현금및현금성자산$|^현금및예치금$")
+CASH = re.compile(r"^현금(?:및|과)현금(?:성자산|등가물)$|^현금및예치금$")
 STFI = re.compile(r"^(?:단기금융상품(?:자산)?|단기금융자산|단기투자자산|단기예금|단기예치금|단기투자증권)$")
 # 유동자산의 당기손익-공정가치 금융자산(단기 운용) — 재무상태표 유동 구간에서만
 FVPL = re.compile(r"^(?:유동|단기)?(?:당기손익(?:-?공정가치)?(?:측정|인식)?(?:지정)?(?:금융자산|금융상품)|단기매매(?:금융)?(?:자산|증권)|상각후원가(?:로)?측정(?:하는)?(?:유동)?금융자산)$")
@@ -40,16 +40,29 @@ PERIOD_RX = audit_fs.PERIOD_RX
 
 
 def _label(s):
-    l = audit_fs._label(re.sub(r"^[\s\-–·ㆍ※▶]+", "", s or ""))
+    l = audit_fs._label(re.sub(r"^[\s\-–—―‐－·ㆍ•∙※▶▷►○●□■◦]+", "", s or ""))
     l = re.sub(r"\(주석?[\d,\.\s]*\)?|\(\*\d*\)|\*\d*$|<[^>]*>", "", l)
     l = re.sub(r"[\(\)（）]", "", l)
+    # 번호 붙은 항목 '1. 현금및현금성자산' · 'Ⅰ. 유동자산' · '(1) …' → 번호를 뗀다('1년이내' 같은 기간은 그대로)
+    l = re.sub(r"^(?:[ⅠⅡⅢⅣⅤⅥⅦⅧⅨⅩⅰⅱⅲⅳⅴⅵⅶⅷⅸⅹ]+|\d{1,2})\.?(?=[가-힣])(?!년|개월|분기|월|일|차|회|기)", "", l)
     return re.sub(r"(?:에대한)?조정(?:액)?$|가산$", "", l)  # 현금흐름 조정 표의 '감가상각비에 대한 조정' → 감가상각비
+
+
+UNIT_ROW = re.compile(r"^\(?\s*단\s*위\s*[:：]?[^)]*\)?$")
+
+
+def _trs(t):
+    """표의 행 — 맨 앞의 '(단위: 천원)'만 있는 행은 뺀다(그다음 행이 머리글)"""
+    trs = t.find_all("tr")
+    while trs and UNIT_ROW.match(_sp(trs[0].get_text(" ", strip=True)) or "x"):
+        trs = trs[1:]
+    return trs
 
 
 def _rows(t):
     """표 하나 → [(항목, [기간별 값])] — 머리글의 기간 수로 열을 나누고, 기간마다 첫 숫자 칸을 쓴다.
     분기 · 반기 표처럼 '3개월 · 누적' 칸이 있으면 누적 칸을 쓴다."""
-    trs = t.find_all("tr")
+    trs = _trs(t)
     if len(trs) < 2:
         return [], 0
     head = [c.get_text(" ", strip=True) for c in trs[0].find_all(["th", "td"])]
@@ -83,6 +96,9 @@ def _rows(t):
 
 
 def _unit_of(t):
+    tr = t.find("tr")
+    if tr is not None and UNIT_ROW.match(_sp(tr.get_text(" ", strip=True)) or "x"):  # 표 안 첫 행의 단위
+        return audit_fs._unit(tr.get_text(" ", strip=True))
     s = t.find_previous(string=re.compile(r"단\s*위"))
     return audit_fs._unit(s) if s else 1e8
 
@@ -201,7 +217,7 @@ def _lease_note(soup):
     for t in soup.find_all("table"):
         if t.find_parent("table") is not None:
             continue
-        trs = t.find_all("tr")
+        trs = _trs(t)
         if not trs or len(trs) > 25:
             continue
         hs = [_sp(c.get_text()) for c in trs[0].find_all(["th", "td"])]
@@ -275,7 +291,56 @@ def _stfi_note(soup, target):
                 seg = []
             else:
                 seg.append((l, nums))
+    v = _stfi_note_t(soup, target)  # 항목이 열로 놓인(가로) 구성 표
+    if v is not None:
+        return v
     return 0.0 if zero else None
+
+
+def _expand(tr):
+    out = []
+    for c in tr.find_all(["td", "th"]):
+        try:
+            n = max(1, int(c.get("colspan") or 1))
+        except ValueError:
+            n = 1
+        out += [c.get_text(" ", strip=True)] * n
+    return out
+
+
+def _stfi_note_t(soup, target):
+    """'구분 | 장단기금융상품 | 파생상품자산 | … | 합계' 머리글에 '유동' 행이 있는 가로 표: 합계 칸이 target 인 행의 단기금융상품 칸"""
+    for t in soup.find_all("table"):
+        if t.find_parent("table") is not None:
+            continue
+        trs = t.find_all("tr")
+        if len(trs) < 2:
+            continue
+        top = cols = tot = None
+        for tr in trs[:4]:  # 항목 이름이 든 머리글 행
+            h = [re.sub(r"주\d+$", "", _label(x)) for x in _expand(tr)]
+            if any(STFI_N.match(x) for x in h):
+                top = h
+                break
+        if not top:
+            continue
+        groups = {}
+        for i, h in enumerate(top):
+            groups.setdefault(h, []).append(i)
+        cols = [g for h, g in groups.items() if STFI_N.match(h)]
+        tot = [i for h, g in groups.items() if re.search(r"합계|^계$", h) for i in g]
+        if not tot:
+            continue
+        u = _unit_of(t)
+        for tr in trs[1:]:
+            cells = _expand(tr)
+            if len(cells) != len(top):
+                continue
+            nums = [audit_fs._num(c) for c in cells]
+            if any(nums[k] is not None and abs(nums[k] / u - target) <= max(0.05, abs(target) * 1e-4) for k in tot):
+                # 항목마다 칸이 여럿(총장부금액 · 할인차금 · 손상 · 장부금액)이면 첫 숫자 칸
+                return sum(next((nums[k] for k in g if nums[k] is not None), 0) for g in cols) / u
+    return None
 
 
 def _cur_head(hs):
@@ -288,9 +353,9 @@ def is_da(l):
                                   and not re.search(r"환입|손상|누계|채권|대손|처분", l))
 
 
-def _flow_vals(rows, u, is_cf=True):
+def _flow_vals(rows, u, is_cf=True, stmt=False):
     np_ = max(len(p) for _, p in rows)
-    if not is_cf and np_ > 2:  # 범주 · 부문별로 칸이 많은 표(첫 칸이 당기가 아님)는 이자비용도 읽지 않는다
+    if not is_cf and np_ > 2 and not stmt:  # 범주 · 부문별로 칸이 많은 표(첫 칸이 당기가 아님)는 이자비용도 읽지 않는다
         return [{} for _ in range(np_)]
     da = [None] * np_; it = [None] * np_
     for lab, per in rows:
@@ -333,14 +398,21 @@ def extract(rcept_no, cons, log=print):
     def collect_flows(flows, nm, note):
         for rows, u, ctx, is_cf, hs in flows:
             cf = is_cf or bool(re.search(r"현금흐름|창출", nm))
-            fv = _flow_vals(rows, u, cf)
+            # 손익계산서(머리글이 모두 기간)는 3개년 칸이어도 이자비용을 읽는다
+            stmt = bool(re.search(r"손익계산서$", nm)) and all(PERIOD_RX.search(h) for h in hs[1:] if h)
+            fv = _flow_vals(rows, u, cf, stmt)
             if cf and any("da" in e for e in fv):
-                (cand_da if _good_da(rows) else cand_da2).append(fv)
+                if re.search(r"토지|건물|기계|차량|부동산|구축물|비품|합계$", "".join(hs[1:])) and not any(
+                        re.search(r"당기순이익|법인세", l) for l, _ in rows):
+                    pass  # 자산 종류별로 나눈 리스 · 유형자산 주석 표(사용권자산 감가상각비 등)는 쓰지 않는다
+                else:
+                    full = any(re.search(r"당기순이익|법인세비용|영업활동|영업에서창출", l) for l, _ in rows)
+                    (cand_da if _good_da(rows) else cand_da2).append((0 if full else 1, len(cand_da) + len(cand_da2), fv))
             if any("int" in e and e["int"] for e in fv):
                 if note and not cf and re.search(r"리스|확정급여|퇴직|사용권|충당|기초|기말|부채", "".join(hs[1:])):
                     continue  # 리스부채 · 확정급여채무 변동 표의 이자비용(이자원가)은 금융비용이 아님
                 fin = any(re.search(r"^금융(?:비용|원가)", l) for l, _ in rows) or bool(FIN_NOTE.search(ctx))
-                (cand_int_nt if note else cand_int_st).append((fv, cf, ctx, 0 if (cf or fin) else 1))
+                (cand_int_nt if (note and not stmt) else cand_int_st).append((fv, cf, ctx, 0 if (cf or fin or stmt) else 1))
 
     for n in st:
         soup = _html(rcept_no, n)
@@ -359,10 +431,10 @@ def extract(rcept_no, cons, log=print):
     need_lease = bs_done and not lease_row and (got("debt") or debt_note)
     need_stfi = ofa[0] is not None and "cash" in per[0]
     lease_v = stfi_v = None
-    if not cand_da or not (cand_int_st or any("int" in e for e in cand_da[0][:1])) or debt_note or need_lease or need_stfi:
+    if not cand_da or not (cand_int_st or any("int" in e for e in min(cand_da)[2][:1])) or debt_note or need_lease or need_stfi:
         for n in notes:
             nm = _sp(n["text"])
-            if not nm.endswith("주석") and not re.search(r"현금흐름|영업활동|창출|금융수익|금융원가|금융비용|차입금|사채|리스|금융자산|금융상품", nm):
+            if not nm.endswith("주석") and not re.search(r"현금흐름|영업활동|창출|금융수익|금융원가|금융비용|차입금|사채|리스|금융자산|금융상품|손익계산서", nm):
                 continue
             soup = _html(rcept_no, n)
             time.sleep(0.2)
@@ -383,7 +455,7 @@ def extract(rcept_no, cons, log=print):
                 for t in soup.find_all("table"):
                     if t.find_parent("table") is not None:
                         continue
-                    trs = t.find_all("tr")
+                    trs = _trs(t)
                     if not trs or len(trs) > 16:
                         continue
                     hs = [_sp(c.get_text()) for c in trs[0].find_all(["th", "td"])]
@@ -403,7 +475,7 @@ def extract(rcept_no, cons, log=print):
                     for t in soup.find_all("table"):
                         if t.find_parent("table") is not None:
                             continue
-                        trs = t.find_all("tr")
+                        trs = _trs(t)
                         if not trs:
                             continue
                         hs = [_sp(c.get_text()) for c in trs[0].find_all(["th", "td"])]
@@ -431,6 +503,11 @@ def extract(rcept_no, cons, log=print):
                     per[0]["debt"] = round(sum(seen.values()), 1)
                     debt_note = False
             collect_flows(flows, nm, True)
+    if bs_done and not fin_liab and "debt" not in per[0] and (per[0].get("int") or 0) < 1:
+        # 재무상태표 · 주석 어디에도 차입금이 없고 이자비용도 1억원 미만: 무차입(리스부채는 아래에서 더함)
+        for e in per:
+            if "cash" in e:
+                e["debt"] = 0.0
     if fin_liab:  # 차입금을 금융부채로 묶은 재무상태표: 재무상태표만으로는 일부(리스부채 등)만 잡히므로
         for e in per[1:]:  # 주석에서 읽는 당기 외의 기간은 쓰지 않는다
             e.pop("debt", None)
@@ -451,7 +528,8 @@ def extract(rcept_no, cons, log=print):
     for e in per:
         e.pop("_bsl", None)
     cand_int_st.sort(key=lambda x: x[3]); cand_int_nt.sort(key=lambda x: x[3])
-    best = (cand_da or cand_da2 or [None])[0]
+    # 현금흐름 조정 표(당기순이익 · 법인세 행이 함께 있는 표)를 먼저, 같은 등급이면 먼저 나온 표
+    best = min(cand_da, key=lambda x: x[:2])[2] if cand_da else (min(cand_da2, key=lambda x: x[:2])[2] if cand_da2 else None)
     if best:
         take(best, ("da", "int"))
     if not got("int"):
