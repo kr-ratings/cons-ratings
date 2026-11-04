@@ -289,6 +289,7 @@ table.mini th{font-size:.7rem;color:var(--muted);font-weight:600;background:none
 table.mini td.n,table.mini th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 table.mini tr:last-child td{border-bottom:0}
 .fin-box{overflow-x:auto}
+.fin-box table.mini tr.gs td{border-top:1.5px solid var(--muted)}
 .card h3 .finb{align-self:center}
 .card h3 .finb button{padding:2px 9px;font-size:.74rem;letter-spacing:0;font-weight:500}
 /* 상세 화면: 어떤 표도 화면 밖으로 밀어내지 않게 — 넓은 표는 카드 안에서만 가로 스크롤 */
@@ -454,7 +455,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
     <div class="sec-head">
       <span class="key"><span>등급 옆 날짜는 최근 평가일</span><span class="o"><i>'24.05.23</i> 평가 후 1년 경과</span><span><span class="kd" style="margin:0">ICR</span> <span class="kd" style="margin:0">CP</span> 회사채 등급이 없을 때 대신 표시</span><span><span class="ol pos">긍정적</span> <span class="ol neg">부정적</span> Outlook(안정적은 생략)</span><span>등급을 누르면 평가사 기업 페이지가 열립니다</span></span>
     </div>
-    <div class="co-hint" role="note"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.9v.1"/></svg>회사명을 누르면 시공사별 상세 화면이 열립니다<span>회사 개요 · 주주 현황 · 재무 요약(5개년) · 수주 현황 · 보증·약정 · 신용등급 이력 · 최근 공시 · 기사 · 심의서 Appendix(워드)</span></div>
+    <div class="co-hint" role="note"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="6.5"/><path d="M8 7.2v4M8 4.9v.1"/></svg>회사명을 누르면 시공사별 상세 화면이 열립니다<span>회사 개요 · 주주 현황 · 주요 재무지표(5개년) · 수주 현황 · 보증·약정 · 신용등급 이력 · 최근 공시 · 기사 · 심의서 Appendix(워드)</span></div>
     <div class="filters">
       <div class="seg" role="group" aria-label="순위 구간" id="seg-band">
         <button type="button" data-v="all" aria-pressed="true">전체</button>
@@ -500,7 +501,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
           <th class="ag1" data-k="KIS" title="한국신용평가"><button type="button">KIS 한신평</button></th>
           <th data-k="KR" title="한국기업평가"><button type="button">KR 한기평</button></th>
           <th data-k="NICE" title="나이스신용평가"><button type="button">NICE</button></th>
-          <th class="docc" title="회사별 심의서 Appendix(회사 개요 · 주주 · 요약 재무제표 · 수주 · 보증·약정) 워드 파일">심의서 Appendix</th>
+          <th class="docc" title="회사별 심의서 Appendix(회사 개요 · 주주 · 주요 재무지표 · 수주 · 보증·약정) 워드 파일">심의서 Appendix</th>
         </tr></thead>
         <tbody id="tbody"><tr><td colspan="9" class="empty">불러오는 중…</td></tr></tbody>
       </table>
@@ -538,7 +539,7 @@ details.tbl summary{cursor:pointer;font-size:.76rem;color:var(--muted)}
     <p>시공능력평가는 대한건설협회가 매년 7월 말 공시하는 건설사별 1건 공사 수행 능력의 금액 평가입니다. 공사실적평가액, 경영평가액, 기술능력평가액, 신인도평가액을 합산하며 발주처의 입찰참가 자격 제한과 업계 순위(도급순위)의 기준으로 쓰입니다.</p>
     <p>순위와 평가액은 대한건설협회가 공시한 엑셀의 토목건축공사업(토건) 기준이며, 평가액에 마우스를 올리면 항목별 평가액이 보입니다. 전년 순위는 건설업 등록번호로 맞추므로 사명이 바뀐 회사도 이어집니다.</p>
     <p>등급은 각 평가사 기업 페이지의 현재 회사채 신용등급과 Outlook, 평가일입니다. 회사채 등급이 없는 회사는 기업신용등급(ICR)을, 그것도 없으면 기업어음(CP) 등급을 표시하고 ICR · CP 표시를 붙입니다. 회사채만 보려면 필터의 '회사채만'을 누르세요. 평가사가 등급을 내지 않았거나 유효기간이 끝난 경우 – 로 표시합니다. 최고등급은 3사 중 가장 높은 등급이며, 평가일이 1년을 넘은 등급은 날짜를 주황색으로 표시하니 평가사 원문에서 한 번 더 확인하시기 바랍니다.</p>
-    <p>최근 변동은 평가사 3사의 등급 평가(상향·하향·전망 변경·유지), DART 주요 공시(수주·채무보증·자금조달·지배구조·주요사항, 정기보고서), 회사 이름이 제목에 나온 기사 중 신용·자금·실적·수주·지배구조 주제만 골라(시공사에 부정적인 기사는 제외) 보여 줍니다. 기사는 구글 뉴스 검색 결과의 제목·출처·링크만 싣고, 같은 내용을 여러 매체가 쓴 경우 하나로 묶습니다. 회사명을 누르면 등급 이력, DART 재무 요약(최근 5개 사업연도와 올해 최신 분기 — 연결재무제표가 있는 회사는 연결이 기본이고 연결이 없던 연도는 빼며, 상세 화면에서 별도로 바꿔 볼 수 있습니다), 수주 현황, 보증·약정 현황, 최근 공시·기사를 한 화면에서 볼 수 있습니다.</p>
+    <p>최근 변동은 평가사 3사의 등급 평가(상향·하향·전망 변경·유지), DART 주요 공시(수주·채무보증·자금조달·지배구조·주요사항, 정기보고서), 회사 이름이 제목에 나온 기사 중 신용·자금·실적·수주·지배구조 주제만 골라(시공사에 부정적인 기사는 제외) 보여 줍니다. 기사는 구글 뉴스 검색 결과의 제목·출처·링크만 싣고, 같은 내용을 여러 매체가 쓴 경우 하나로 묶습니다. 회사명을 누르면 등급 이력, DART 주요 재무지표(매출액 · EBIT · EBITDA · 차입금 · 커버리지 등, 최근 5개 사업연도와 올해 최신 분기 — 연결재무제표가 있는 회사는 연결이 기본이고 연결이 없던 연도는 빼며, 상세 화면에서 별도로 바꿔 볼 수 있습니다), 수주 현황, 보증·약정 현황, 최근 공시·기사를 한 화면에서 볼 수 있습니다.</p>
     <p>수주 현황과 보증·약정 현황은 DART 원문에서 읽습니다. 사업·반기·분기보고서를 내는 회사는 '매출 및 수주상황'의 현장별 표 전체와 '우발부채 등에 관한 사항'의 부동산 PF 보증(현장별) · 책임준공 · 중도금대출 · SOC 보증 · 유동화증권 신용보강을, 감사보고서만 내는 회사는 주석의 공사계약 잔액 변동 표와 남에게 제공한 보증 · 약정 표를 싣습니다(연 1회 갱신). 소송 · 담보 · 제공받은 보증은 싣지 않습니다. 금액은 억원으로 바꿔 표시합니다. ☆ 관심 회사는 이 브라우저에만 저장됩니다.</p>
     <p>공사비 지표는 한국건설기술연구원이 매월 말 발표하는 건설공사비지수(2020년 = 100)입니다. 발표 엑셀에 2000년부터의 전 기간이 들어 있어 과거 수정치도 함께 반영됩니다.</p>
     <p>매일 오전(08:00)에 원 출처에서 시공능력평가와 등급을 다시 받아 갱신합니다. 시공능력평가는 매년 7월 말 새 공시가 올라오면 다음 날 아침에 반영됩니다.</p>
@@ -939,7 +940,7 @@ function openCo(reg,push=true){
   $("#dr-doc").addEventListener("click",e=>appendixDownload(e.currentTarget,r));
   $("#dr-link").addEventListener("click",()=>copyText(`${location.origin}${location.pathname}#co=${encodeURIComponent(reg)}`,"이 회사 링크를 복사했습니다"));
 }
-// 상세 화면의 주주 현황 · 재무 요약 엑셀
+// 상세 화면의 주주 현황 · 주요 재무지표 엑셀
 async function coXLSX(btn,r,what){
   const reg=regOf(r), dc=DART&&DART.co&&DART.co[reg]; if(!dc) return;
   const lb=btn.lastChild.textContent; btn.disabled=true; btn.lastChild.textContent="만드는 중…";
@@ -959,14 +960,14 @@ async function coXLSX(btn,r,what){
       cols=[{wch:30},{wch:14},{wch:11}];
       for(let i=4;i<aoa.length-2;i++) fmt.push([i,2,"0.0"]);
     }else{
-      const f=finSel(dc), ps=finPeriods(f); title="재무요약";
-      const K=[["매출액","rev"],["영업이익","op"],["영업이익률(%)","opm"],["당기순이익","ni"],["자산총계","assets"],["부채총계","liab"],["자본총계","equity"],["부채비율(%)","dr"]];
-      aoa=[[`${nm} 재무 요약`],[`${f.basis} 기준 · 단위: 억원 · 출처: DART ${f.src||"정기보고서(사업·반기·분기보고서)"}${f.audit_no?" ("+dartUrl(f.audit_no)+")":""}`],[],
+      const f=finSel(dc), ps=finPeriods(f); title="주요재무지표";
+      const K=FINK.map(([lb,k,t])=>[lb+(t==="pct"?"(%)":t==="x"?"(배)":""),k,t]);
+      aoa=[[`${nm} 주요 재무지표`],[`${f.basis} 기준 · 단위: 억원, %, 배 · 출처: DART ${f.src||"정기보고서(사업·반기·분기보고서)"}${f.audit_no?" ("+dartUrl(f.audit_no)+")":""}`],[],
         ["구분",...ps.map(p=>p.t==="FY"?`${p.p}${p.b?` (${p.b})`:""}`:p.p)]];
       for(const [lb2,k] of K) aoa.push([lb2,...ps.map(p=>r1(p[k]))]);
-      aoa.push([],[ps.some(p=>p.t!=="FY")?"분기 열은 올해 누적 실적과 분기말 재무상태입니다. 부채비율 = 부채총계 ÷ 자본총계.":"부채비율 = 부채총계 ÷ 자본총계."]);
+      aoa.push([],[(ps.some(p=>p.t!=="FY")?"분기 열은 올해 누적 실적과 분기말 재무상태입니다(순차입금/EBITDA는 EBITDA 연환산). ":"")+FIN_NOTE+"."]);
       cols=[{wch:16},...ps.map(()=>({wch:12}))];
-      K.forEach(([,k],j)=>ps.forEach((_,c)=>fmt.push([4+j,1+c,/opm|dr/.test(k)?"0.0":"#,##0"])));
+      K.forEach(([,k,t],j)=>ps.forEach((_,c)=>fmt.push([4+j,1+c,t==="amt"?"#,##0":"0.0"])));
     }
     aoa.push([`내려받은 시각: ${new Date().toLocaleString("ko-KR",{timeZone:"Asia/Seoul"})} · ${location.origin}${location.pathname} · 공개 자료를 모은 참고용 자료이며 원문과 다를 수 있습니다.`]);
     const ws=XLSX.utils.aoa_to_sheet(aoa); ws["!cols"]=cols;
@@ -989,6 +990,11 @@ function copyText(t,msg){
 }
 // 재무 기준: 연결이 있으면 연결이 기본, 상세 화면의 전환 버튼으로 별도(fin_s)를 볼 수 있다. 엑셀 · 워드도 고른 기준으로 나간다.
 let FINB="연결";
+// 주요 재무지표 행: [이름, 키, 형식(amt 억원 · pct % · x 배), 묶음 시작]
+const FINK=[["매출액","rev","amt",1],["EBIT","op","amt"],["EBITDA","ebitda","amt"],["당기순이익","ni","amt"],
+  ["총자산","assets","amt",1],["총차입금","debt","amt"],["순차입금","nd","amt"],
+  ["EBIT마진","opm","pct",1],["EBITDA마진","ebitdam","pct"],["EBITDA/금융비용","cov","x"],["순차입금/EBITDA","nde","x"],["부채비율","dr","pct"],["차입금의존도","dep","pct"]];
+const FIN_NOTE="EBIT = 영업이익, EBITDA = 영업이익 + 감가상각비(유형 · 무형 · 사용권자산 등), 총차입금 = 단기 · 장기차입금 + 사채 + 리스부채(유동성 포함), 순차입금 = 총차입금 − 현금및현금성자산 · 단기금융상품, 금융비용 = 손익계산서 금융비용(없으면 이자비용), 부채비율 = 부채총계 ÷ 자본총계, 차입금의존도 = 총차입금 ÷ 총자산";
 function finSel(dc){ return dc?(FINB==="별도"&&dc.fin_s?dc.fin_s:dc.fin)||null:null; }
 function finOf(reg){ return finSel(DART&&DART.co&&DART.co[reg]); }
 function finPeriods(f){
@@ -1164,7 +1170,7 @@ const WX={
         const fill=c.kind==="head"?"1F497D":(c.kind==="label"||c.kind==="sum")?"DBE5F1":null;
         const ro={b:c.kind&&c.kind!=="",color:c.kind==="head"?"FFFFFF":"000000",sz:c.sz||sz};
         const lines=c.vm==="cont"?[""]:String(c.t??"").split("\n");
-        return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${span>1?`<w:gridSpan w:val="${span}"/>`:""}${c.vm==="restart"?'<w:vMerge w:val="restart"/>':c.vm==="cont"?"<w:vMerge/>":""}<w:tcBorders><w:top ${bd}/>${first?'<w:left w:val="nil"/>':`<w:left ${bd}/>`}<w:bottom ${bd}/>${last?'<w:right w:val="nil"/>':`<w:right ${bd}/>`}</w:tcBorders>${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:""}<w:vAlign w:val="center"/></w:tcPr>${
+        return `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/>${span>1?`<w:gridSpan w:val="${span}"/>`:""}${c.vm==="restart"?'<w:vMerge w:val="restart"/>':c.vm==="cont"?"<w:vMerge/>":""}<w:tcBorders>${c.top?`<w:top w:val="single" w:sz="${c.top}" w:space="0" w:color="auto"/>`:`<w:top ${bd}/>`}${first?'<w:left w:val="nil"/>':`<w:left ${bd}/>`}<w:bottom ${bd}/>${last?'<w:right w:val="nil"/>':`<w:right ${bd}/>`}</w:tcBorders>${fill?`<w:shd w:val="clear" w:color="auto" w:fill="${fill}"/>`:""}<w:vAlign w:val="center"/></w:tcPr>${
           lines.map(l=>`<w:p><w:pPr><w:spacing w:after="0" w:line="${o.line||260}" w:lineRule="auto"/><w:jc w:val="${c.jc||"center"}"/>${WX.rpr(ro)}</w:pPr>${l===""?"":WX.run(l,ro)}</w:p>`).join("")}</w:tc>`;
       }).join("");
       const head=cells.some(c=>c.kind==="head");
@@ -1217,18 +1223,18 @@ function appendixXML(r){
     rows.push(row("합계","",100,1));
     out.push(WX.table(w,rows));
   } else out.push(WX.p("감사보고서와 DART 공시에 주주별 지분 구성이 공개되어 있지 않습니다.",{sz:18}));
-  // 3. 요약 재무제표
-  out.push(WX.h("3. 요약 재무제표"));
+  // 3. 주요 재무지표
+  out.push(WX.h("3. 주요 재무지표"));
   const f=finSel(dc), ps=finPeriods(f);
   if(ps.length){
-    out.push(WX.note(`(단위: 억원, %, 기준: ${f.basis}, 출처: Dart 공시${f.src&&f.src!=="사업보고서"?` ${f.src}`:""})`));
+    out.push(WX.note(`(단위: 억원, 배, %, 기준: ${f.basis}, 출처: Dart 공시${f.src&&f.src!=="사업보고서"?` ${f.src}`:""})`));
     const cw=Math.floor((W_FULL-1418)/ps.length), widths=[1418,...ps.map((_,k)=>k<ps.length-1?cw:W_FULL-1418-cw*(ps.length-1))];
-    const K=[["매출액","rev",wn],["영업이익","op",wn],["당기순이익","ni",wn],["총자산","assets",wn],["총부채","liab",wn],["총자본","equity",wn],["영업이익률","opm",wp],["부채비율","dr",wp]];
-    out.push(WX.table(widths,[[H("구 분"),...ps.map(p=>H(wPer(p)))],...K.map(([lb,k,fm])=>[L(lb),...ps.map(p=>N(fm(p[k])))])]));
+    const K=FINK.map(([lb,k,t,g])=>[lb,k,t==="amt"?wn:wp,g]);
+    out.push(WX.table(widths,[[H("구 분"),...ps.map(p=>H(wPer(p)))],...K.map(([lb,k,fm,g],i)=>[L(lb),...ps.map(p=>N(fm(p[k])))].map(c=>g&&i?{...c,top:12}:c))]));
     const notes=[];
-    if(ps.some(p=>p.t!=="FY")) notes.push("분기·반기 열은 해당 연도 누적 실적과 분기말 재무상태");
+    if(ps.some(p=>p.t!=="FY")) notes.push("분기·반기 열은 해당 연도 누적 실적과 분기말 재무상태(순차입금/EBITDA는 EBITDA 연환산)");
     if(ps.some(p=>p.b)) notes.push("* 표시 연도는 "+[...new Set(ps.filter(p=>p.b).map(p=>p.b))].join("·")+" 기준");
-    notes.push("부채비율 = 총부채 ÷ 총자본");
+    notes.push(FIN_NOTE);
     out.push(WX.p("주) "+notes.join(" / "),{sz:16,spacing:'<w:spacing w:before="40"/>'}));
   } else out.push(WX.p("DART에서 이 회사의 재무를 찾지 못했습니다.",{sz:18}));
   // 4. 수주 현황
@@ -1427,10 +1433,11 @@ function coHTML(r){
   const f=finSel(dc), ps=finPeriods(f);
   let fin;
   if(ps.length){
-    const rowsF=[["매출액","rev",won],["영업이익","op",won],["영업이익률","opm",pctS],["당기순이익","ni",won],["자산총계","assets",won],["부채총계","liab",won],["자본총계","equity",won],["부채비율","dr",pctS]];
-    fin=`<div class="fin-box"><table class="mini"><thead><tr><th>${f.basis} · 억원</th>${ps.map(p=>`<th class="n">${p.t==="FY"?p.p:p.p.replace(" ","<br>")}${p.b?`<br><span class="dim" style="font-weight:400">${p.b}</span>`:""}</th>`).join("")}</tr></thead><tbody>${rowsF.map(([lb,k,fm])=>`<tr><td>${lb}</td>${ps.map(p=>`<td class="n">${fm(p[k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>${f.src==="감사보고서"||f.src==="사업보고서 원문"
-      ?`<p class="hint" style="margin-top:6px">${f.src==="감사보고서"?"감사보고서":"사업보고서"} 원문의 재무제표에서 읽은 숫자입니다${f.src==="감사보고서"?"(비상장 외부감사 대상 회사라 반기·분기 실적은 공시되지 않습니다)":""}. 최근 원문: <a href="${dartUrl(f.audit_no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(f.audit_nm||"원문")}</a>.${ps.some(p=>p.b)?" 연도 아래 '연결'·'별도' 표시는 그해만 기준이 다른 경우입니다.":""} 부채비율 = 부채총계 ÷ 자본총계.</p>`
-      :'<p class="hint" style="margin-top:6px">분기 열은 올해 누적 실적과 분기말 재무상태입니다. 부채비율 = 부채총계 ÷ 자본총계.</p>'}`;
+    const xS=v=>v==null?"–":`${v.toFixed(1)}배`, FM={amt:won,pct:pctS,x:xS};
+    const rowsF=FINK.map(([lb,k,t,g])=>[lb,k,FM[t],g]);
+    fin=`<div class="fin-box"><table class="mini"><thead><tr><th>${f.basis} · 억원</th>${ps.map(p=>`<th class="n">${p.t==="FY"?p.p:p.p.replace(" ","<br>")}${p.b?`<br><span class="dim" style="font-weight:400">${p.b}</span>`:""}</th>`).join("")}</tr></thead><tbody>${rowsF.map(([lb,k,fm,g],i)=>`<tr${g&&i?' class="gs"':""}><td>${lb}</td>${ps.map(p=>`<td class="n">${fm(p[k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>${f.src==="감사보고서"||f.src==="사업보고서 원문"
+      ?`<p class="hint" style="margin-top:6px">${f.src==="감사보고서"?"감사보고서":"사업보고서"} 원문의 재무제표에서 읽은 숫자입니다${f.src==="감사보고서"?"(비상장 외부감사 대상 회사라 반기·분기 실적은 공시되지 않습니다)":""}. 최근 원문: <a href="${dartUrl(f.audit_no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(f.audit_nm||"원문")}</a>.${ps.some(p=>p.b)?" 연도 아래 '연결'·'별도' 표시는 그해만 기준이 다른 경우입니다.":""} ${FIN_NOTE}.${ps.some(p=>p.t!=="FY")?" 분기 열의 순차입금/EBITDA는 EBITDA를 연환산했습니다.":""}</p>`
+      :`<p class="hint" style="margin-top:6px">분기 열은 올해 누적 실적과 분기말 재무상태입니다(순차입금/EBITDA는 EBITDA 연환산). ${FIN_NOTE}.</p>`}`;
   } else if(!DART){
     fin='<p class="hint">재무·공시 데이터는 준비 중입니다.</p>';
   } else if(dc&&dc.audit){
@@ -1447,10 +1454,10 @@ function coHTML(r){
     <div class="dr-b">
       <div class="acts"><button type="button" class="dl" id="dr-star" aria-pressed="${WATCH.has(reg)}">${WATCH.has(reg)?"★ 관심 회사":"☆ 관심 회사로"}</button>
         <button type="button" class="dl" id="dr-link">링크 복사</button>
-        <button type="button" class="dl" id="dr-doc" title="회사 개요 · 주주 · 요약 재무제표 · 수주 · 보증·약정을 심의서 Appendix 양식의 워드 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>심의서 Appendix(워드)</button></div>
+        <button type="button" class="dl" id="dr-doc" title="회사 개요 · 주주 · 주요 재무지표 · 수주 · 보증·약정을 심의서 Appendix 양식의 워드 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>심의서 Appendix(워드)</button></div>
       <div class="card"><h3>회사 개요 <span>DART 기업개황</span></h3>${overviewHTML(r,dc)}</div>
       <div class="card"><h3>주주 현황 ${dc&&dc.sh?`<button type="button" class="xlb" id="xl-sh" title="주주 현황을 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`:""}</h3>${holdersHTML(dc)}</div>
-      <div class="card"><h3>재무 요약 <span class="h3r">${dc&&dc.fin&&dc.fin_s?`<span class="seg finb" role="group" aria-label="재무 기준">${["연결","별도"].map(x=>`<button type="button" data-b="${x}" aria-pressed="${(f&&f.basis)===x}">${x}</button>`).join("")}</span>`:""}${dc?`<a href="${dartCo}" target="_blank" rel="noopener">DART 공시 검색 →</a>`:""}${ps.length?`<button type="button" class="xlb" id="xl-fin" title="재무 요약을 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`:""}</span></h3>${fin}</div>
+      <div class="card"><h3>주요 재무지표 <span class="h3r">${dc&&dc.fin&&dc.fin_s?`<span class="seg finb" role="group" aria-label="재무 기준">${["연결","별도"].map(x=>`<button type="button" data-b="${x}" aria-pressed="${(f&&f.basis)===x}">${x}</button>`).join("")}</span>`:""}${dc?`<a href="${dartCo}" target="_blank" rel="noopener">DART 공시 검색 →</a>`:""}${ps.length?`<button type="button" class="xlb" id="xl-fin" title="주요 재무지표를 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`:""}</span></h3>${fin}</div>
       ${ordCard(r)}
       ${cgCard(r)}
       <div class="card"><h3>신용등급 <span>평가사 3사 현재</span></h3><div class="rnow">${now}</div>${histT}</div>

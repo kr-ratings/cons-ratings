@@ -6,7 +6,7 @@
 """
 import re, time
 
-VERSION = 2  # 파서가 바뀌면 올린다 → 저장해 둔 읽은 결과를 다시 읽음
+VERSION = 3  # 파서가 바뀌면 올린다 → 저장해 둔 읽은 결과를 다시 읽음
 
 import requests
 from bs4 import BeautifulSoup
@@ -73,6 +73,56 @@ def _unit(text):
 PERIOD_RX = re.compile(r"제\s*\d+\s*(\(.*?\))?\s*기|당기|전기|\d{4}")
 
 
+# 주요 재무지표용 합계 항목(행 이름 전체가 맞을 때만) — 재무상태표: 차입금 · 현금성자산, 손익: 금융비용, 현금흐름: 감가상각비 등
+DEBT_RX = re.compile(r"^(단기|장기|유동성장기|유동성)?(차입금|사채|리스부채|차입부채|금융리스부채)$|^유동성장기부채$|^(유동성)?(전환|신주인수권부|교환|영구)사채$"
+                     r"|^(단기|장기)?(유동화)?(채무|차입금)$|^유동성장기(사채|리스부채)$")
+DEBT_NOT = re.compile(r"할인|할증|조정|이자|미지급|매입채무|기타채무|^채무$")
+CASH_RX = re.compile(r"^(현금및현금성자산|현금및예금|단기금융상품|단기금융자산|단기예금)$")
+FC_RX = [re.compile(r"^(금융비용|금융원가)$"), re.compile(r"^이자비용$")]
+DA_RX = re.compile(r"^(감가상각비|유형자산감가상각비|무형자산상각비|무형자산감가상각비|사용권자산(감가)?상각비|투자부동산(감가)?상각비)$")
+
+
+def _rows(t):
+    """본문 표 하나 → [(행 이름, [기간1, 기간2, ...])] (머리글 순서 = 최근 기간부터)"""
+    out = []
+    rows = t.find_all("tr")
+    if not rows:
+        return out
+    head = [c.get_text(" ", strip=True) for c in rows[0].find_all(["th", "td"])]
+    has_note = any("주석" in _sp(h) for h in head)
+    np_ = sum(1 for h in head[1:] if PERIOD_RX.search(_sp(h)) and "주석" not in _sp(h)) or 2
+    for tr in rows[1:]:
+        cells = [c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])]
+        if len(cells) < 2:
+            continue
+        lab = _label(cells[0])
+        vals = cells[2:] if has_note and len(cells) >= np_ + 2 else cells[1:]
+        nums = [_num(v) for v in vals]
+        if not any(n is not None for n in nums):
+            continue
+        size = max(1, len(nums) // np_)
+        per = []
+        for i in range(np_):
+            g = [n for n in nums[i * size:(i + 1) * size if i < np_ - 1 else None] if n is not None]
+            per.append(g[-1] if g else None)
+        out.append((lab, per))
+    return out
+
+
+def _sum_rows(rows, rx, not_rx=None, once=True):
+    """이름이 맞는 행들의 기간별 합(같은 이름은 처음 한 번만) → [기간별 합] 또는 None"""
+    seen, tot = set(), None
+    for lab, per in rows:
+        if not rx.search(lab) or (not_rx and not_rx.search(lab)) or (once and lab in seen):
+            continue
+        seen.add(lab)
+        tot = tot or [None] * len(per)
+        for i, v in enumerate(per[:len(tot)]):
+            if v is not None:
+                tot[i] = (tot[i] or 0) + abs(v)
+    return tot
+
+
 def _statement(t):
     """본문 표 하나 → {항목: [기간1, 기간2, ...]} (머리글 순서 = 최근 기간부터)"""
     out = {}
@@ -113,7 +163,8 @@ def _read(rcept_no, node):
     r = _get(f"{VIEW}/report/viewer.do", params={"rcpNo": rcept_no, "dcmNo": node["dcmNo"], "eleId": node["eleId"],
                                                   "offset": node["offset"], "length": node["length"], "dtd": node["dtd"]})
     soup = BeautifulSoup(r.content, "html.parser")
-    vals, got_is = {}, False
+    vals, got_is, got_cf = {}, False, False
+    eok = lambda xs, u: None if xs is None else [None if v is None else round(v / u) for v in xs]
     for t in soup.find_all("table"):
         if len(t.find_all("tr")) < 8:
             continue
@@ -122,16 +173,61 @@ def _read(rcept_no, node):
             u = _unit_of(t)
             for k in ("assets", "liab", "equity"):
                 if k in st:
-                    vals[k] = [None if v is None else round(v / u) for v in st[k]]
+                    vals[k] = eok(st[k], u)
+            R = _rows(t)
+            for k, rx, nrx in (("debt", DEBT_RX, DEBT_NOT), ("cash", CASH_RX, None)):
+                x = _sum_rows(R, rx, nrx, once=False)
+                if x:
+                    vals[k] = eok(x, u)
         elif not got_is and "assets" in vals and ("rev" in st or "op" in st):
             u = _unit_of(t)
             for k in ("rev", "op", "ni"):
                 if k in st:
-                    vals[k] = [None if v is None else round(v / u) for v in st[k]]
+                    vals[k] = eok(st[k], u)
+            R = _rows(t)
+            for rx in FC_RX:
+                x = next((per for lab, per in R if rx.search(lab)), None)
+                if x:
+                    vals["fc"] = eok([abs(v) if v is not None else None for v in x], u); break
             got_is = True
-        if got_is:
+        elif got_is and not got_cf:
+            txt = _sp(t.get_text())
+            if "영업활동" in txt and ("투자활동" in txt or "재무활동" in txt):
+                got_cf = True
+                x = _sum_rows(_rows(t), DA_RX)
+                if x:
+                    vals["da"] = eok(x, _unit_of(t))
+        if got_cf:
             break
     return vals
+
+
+def _notes_da(rcept_no, cons):
+    """현금흐름표에 감가상각비가 없는 회사(조정 내역을 주석에 둔 경우): 주석의 영업현금흐름 · 비용의 성격별 분류 표에서 당기 · 전기"""
+    nodes = _nodes(rcept_no)
+    cand = [n for n in nodes if n["dcmNo"] and "주석" in n["text"] and (("연결" in n["text"]) == cons or n["text"] == "주석")]
+    for node in cand[:1]:
+        r = _get(f"{VIEW}/report/viewer.do", params={"rcpNo": rcept_no, "dcmNo": node["dcmNo"], "eleId": node["eleId"],
+                                                      "offset": node["offset"], "length": node["length"], "dtd": node["dtd"]})
+        soup = BeautifulSoup(r.content, "html.parser")
+        best = None
+        for t in soup.find_all("table"):
+            prev = t.find_previous(string=re.compile(r"\S"))
+            ctx = _sp(" ".join(x for x in [t.find_previous("p").get_text(" ", strip=True) if t.find_previous("p") else "", str(prev or "")]))
+            pri = 0 if re.search(r"영업(에서|으로부터|활동으로부터)?창출된현금|영업현금흐름|현금흐름표", ctx) else 1 if "성격별" in ctx else None
+            if pri is None:
+                continue
+            R = _rows(t)
+            x = _sum_rows(R, DA_RX)
+            if x and (best is None or pri < best[0]):
+                best = (pri, eok_(x, _unit_of(t)))
+        if best:
+            return best[1]
+    return None
+
+
+def eok_(xs, u):
+    return [None if v is None else round(v / u) for v in xs]
 
 
 NODE_PREF = [r"^\(첨부\)연결재무제표", r"^\(첨부\)재무제표", r"^\d+\.연결재무제표$", r"^\d+\.재무제표$"]
@@ -153,9 +249,17 @@ def parse(rcept_no, prefer_cons=True):
             break
     else:
         return None
+    cons = "연결" in node["text"]
+    if "da" not in vals:  # 감가상각비를 현금흐름표 대신 주석에 둔 회사
+        try:
+            x = _notes_da(rcept_no, cons)
+            if x:
+                vals["da"] = x
+        except Exception:
+            pass
     n = max(len(v) for v in vals.values())
     periods = [{k: (v[i] if i < len(v) else None) for k, v in vals.items()} for i in range(n)]
-    return {"v": VERSION, "periods": periods, "consolidated": "연결" in node["text"]}
+    return {"v": VERSION, "periods": periods, "consolidated": cons}
 
 
 def _nodes(rcept_no):

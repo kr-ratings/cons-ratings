@@ -275,13 +275,91 @@ def financials(D, codes, today):
     return out
 
 
+ANNUAL = {"1Q": 4, "1H": 2, "3Q": 4 / 3}  # 분기 누적 EBITDA → 연환산(순차입금/EBITDA)
+
+
 def ratios(p):
+    """부채비율 · 영업이익률과 주요 재무지표(EBITDA, 순차입금, 마진, 커버리지, 차입금의존도)"""
+    for k in ("dr", "opm", "ebitda", "nd", "ebitdam", "cov", "nde", "dep"):
+        p.pop(k, None)
     if p.get("liab") is not None and p.get("equity"):
         p["dr"] = round(p["liab"] / p["equity"] * 100, 1) if p["equity"] > 0 else None
-    else:
-        p.pop("dr", None)
     if p.get("op") is not None and p.get("rev"):
         p["opm"] = round(p["op"] / p["rev"] * 100, 1)
+    if p.get("op") is not None and p.get("da") is not None:
+        p["ebitda"] = p["op"] + p["da"]
+    if p.get("debt") is not None:
+        p["nd"] = p["debt"] - (p.get("cash") or 0)
+        if p.get("assets"):
+            p["dep"] = round(p["debt"] / p["assets"] * 100, 1)
+    if p.get("ebitda") is not None and p.get("rev"):
+        p["ebitdam"] = round(p["ebitda"] / p["rev"] * 100, 1)
+    if p.get("ebitda") is not None and p.get("fc"):
+        p["cov"] = round(p["ebitda"] / p["fc"], 1)
+    if p.get("nd") is not None and p.get("ebitda"):
+        e = p["ebitda"] * ANNUAL.get(p.get("t"), 1)
+        p["nde"] = round(p["nd"] / e, 1) if e > 0 else None
+
+
+# 전체 재무제표(fnlttSinglAcntAll)에서 주요 재무지표 항목 — 이름 전체가 맞는 계정만, 액면 · 할인차금 같은 세부 계정은 뺀다
+import audit_fs as _afs
+X_NOT_ID = re.compile(r"Nominal|Discount|Premium|Adjustment(?!sFor)", re.I)
+
+
+def _xsum(xs, rx, not_rx=None, col="thstrm_amount", once=False):
+    std = {_afs._sp(x["account_nm"]) for x in xs if not x.get("account_id", "").startswith("-")}
+    tot, seen = None, set()
+    for x in xs:
+        nm = _afs._label(x.get("account_nm", ""))
+        if not rx.search(nm) or (not_rx and not_rx.search(nm)) or X_NOT_ID.search(x.get("account_id", "")):
+            continue
+        if x.get("account_id", "").startswith("-") and _afs._sp(x["account_nm"]) in std:
+            continue  # 표준계정과 이름이 같은 비표준 세부 계정(중복)
+        if once and nm in seen:
+            continue
+        seen.add(nm)
+        v = _amt(x.get(col))
+        if v is not None:
+            tot = (tot or 0) + abs(v)
+    return tot
+
+
+def api_extra(D, corp_code, ent, fs, today):
+    """fin 시리즈(연결이면 CFS, 별도면 OFS)의 연도 · 분기에 차입금 · 현금성자산 · 금융비용 · 감가상각비를 채운다"""
+    ps = {p["p"]: p for p in ent["periods"]}
+    fys = sorted(int(p["p"]) for p in ent["periods"] if p["t"] == "FY")
+    calls = []
+    if fys:
+        # 사업보고서 한 건에 재무상태 · 손익은 3개년, 현금흐름은 2개년이 있어 2년 간격으로 받는다
+        calls += [(y, "11011") for y in (fys[-1], fys[-1] - 2, fys[-1] - 4) if y >= fys[0]]
+    q = next((p for p in ent["periods"] if p["t"] != "FY"), None)
+    if q:
+        code = {lb: c for c, lb in REPRT}.get(q["t"])
+        if code:
+            calls.append((int(q["p"][:4]), code))
+    for y, code in calls:
+        d = D.json("fnlttSinglAcntAll.json", corp_code=corp_code, bsns_year=y, reprt_code=code, fs_div=fs)
+        if d.get("status") != "000":
+            continue
+        L = d.get("list", [])
+        by = lambda sj: [x for x in L if x.get("sj_div") in sj]
+        BS, IS, CF = by(("BS",)), by(("IS", "CIS")), by(("CF",))
+        cols = [("thstrm_amount", 0), ("frmtrm_amount", 1), ("bfefrmtrm_amount", 2)] if code == "11011" else [("thstrm_amount", 0)]
+        for col, off in cols:
+            key = f"{y - off}" if code == "11011" else q["p"]
+            p = ps.get(key)
+            if not p:
+                continue
+            flow = "thstrm_add_amount" if (code != "11011" and col == "thstrm_amount" and any(x.get("thstrm_add_amount") for x in IS)) else col
+            vals = {"debt": _xsum(BS, _afs.DEBT_RX, _afs.DEBT_NOT, col), "cash": _xsum(BS, _afs.CASH_RX, None, col),
+                    "fc": next((v for rx in _afs.FC_RX for v in [_xsum(IS, rx, None, flow, once=True)] if v is not None), None),
+                    "da": _xsum(CF, _afs.DA_RX, None, col, once=True)}
+            for k, v in vals.items():
+                if v is not None and p.get(k) is None:
+                    p[k] = v
+        time.sleep(0.15)
+    for p in ent["periods"]:
+        ratios(p)
 
 
 AUD_RX = re.compile(r"^(?:\[[^\]]*\])?\s*(연결)?감사보고서\s*\((\d{4})\.(\d{2})\)")
@@ -344,7 +422,7 @@ def _audit_series(reps, cons, want, cache, log):
             y = r["y"] - i
             if y not in want or y in periods:
                 continue
-            ent = {"p": f"{y}", "t": "FY", **{k: vals.get(k) for k in ("rev", "op", "ni", "assets", "liab", "equity")}}
+            ent = {"p": f"{y}", "t": "FY", **{k: vals.get(k) for k in ("rev", "op", "ni", "assets", "liab", "equity", "debt", "cash", "fc", "da")}}
             if full(vals):
                 periods[y] = ent; used = True
             elif vals.get("assets") is not None and y not in partial:
@@ -603,6 +681,16 @@ def collect(rows, prev, now, log=print):
                         ratios(p)
             except Exception as e:
                 errors.append(f"재무 보완 {k}: {str(e)[:60]}")
+        # 주요 재무지표(차입금 · 현금성자산 · 금융비용 · 감가상각비): 정기보고서 제출사는 전체 재무제표 API에서
+        for k, v in co.items():
+            f0 = v.get("fin")
+            if not f0 or f0.get("src"):
+                continue
+            for f in [f0] + ([f0["alt"]] if f0.get("alt") else []):
+                try:
+                    api_extra(D, v["corp_code"], f, "CFS" if f["basis"] == "연결" else "OFS", today)
+                except Exception as e:
+                    errors.append(f"재무지표 {k}: {str(e)[:60]}")
         # 연결이 기본인 회사의 별도 시리즈는 fin_s 로 따로 둔다(화면 전환 버튼용)
         for v in co.values():
             f = v.get("fin")
