@@ -298,8 +298,8 @@ def ratios(p):
     if p.get("ebitda") is not None and p.get("fc"):
         p["cov"] = round(p["ebitda"] / p["fc"], 1)
     if p.get("nd") is not None and p.get("ebitda"):
-        e = p["ebitda"] * ANNUAL.get(p.get("t"), 1)
-        p["nde"] = round(p["nd"] / e, 1) if e > 0 else None
+        e = p["ebitda"] * ANNUAL.get(p.get("t"), 1)  # EBITDA가 음수여도 계산
+        p["nde"] = round(p["nd"] / e, 1)
 
 
 AUD_RX = re.compile(r"^(?:\[[^\]]*\])?\s*(연결)?감사보고서\s*\((\d{4})\.(\d{2})\)")
@@ -693,7 +693,7 @@ def collect(rows, prev, now, log=print):
                     afs_cache[f"x{int(cons)}:{no}"] = x
         left = sum(1 for no, cons in need if f"x{int(cons)}:{no}" not in afs_cache)
         log(f"재무지표 원문 {len(need) - left}/{len(need)}건 읽음 · 남은 {left}건")
-        metrics_ready = left == 0
+        metrics_ready = metrics_ready or left == 0  # 한 번 다 읽은 뒤에는(새 버전으로 다시 읽는 중에도 이전 값이 있으므로) 새 양식 유지
         def _vals(key, i):
             x = afs_cache.get(key)
             vals = (x or {}).get("periods") or []
@@ -704,7 +704,7 @@ def collect(rows, prev, now, log=print):
                 key = f"x{int(cons)}:{no}"
                 e = _vals(key, i)
                 p["xs"] = f"{key}#{i}"  # 어느 원문의 몇 번째 기간에서 읽었는지(점검용)
-                # 같은 해 숫자는 다음 해 원문의 전기 칸에도 있다: 두 값이 3% 넘게 다르면 다음 해 원문(재작성 반영) 값을 쓴다
+                # 그해 원문 값이 없을 때만 다음 해 원문의 전기 칸 값을 쓴다
                 e2 = {}
                 if p["t"] == "FY" and i == 0:
                     nx = own.get((id(f), str(int(p["p"]) + 1)))
@@ -712,8 +712,8 @@ def collect(rows, prev, now, log=print):
                         e2 = _vals(f"x{int(nx[1])}:{nx[0]}", 1)
                 for kk, src in (("debt", "debt"), ("cash", "cash"), ("da", "da"), ("fc", "int")):  # 금융비용 = 이자비용
                     p.pop(kk, None)
-                    a0, a1 = e.get(src), e2.get(src)
-                    val = a1 if (a0 is not None and a1 is not None and abs(a0 - a1) > max(1, 0.03 * max(abs(a0), abs(a1)))) else (a0 if a0 is not None else a1)
+                    a0, a1 = e.get(src), e2.get(src) or None  # 0은 '값 없음'(표를 잘못 읽은 경우)
+                    val = a0 if a0 is not None else a1  # 그해 원문(최초 공시) 값 우선
                     if val is not None:
                         p[kk] = val
                 # 앞뒤가 맞지 않는 값은 쓰지 않는다(원문 표를 잘못 읽은 경우): 차입금 > 부채총계, 현금성자산 > 자산총계,
