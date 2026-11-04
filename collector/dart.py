@@ -765,12 +765,16 @@ def collect(rows, prev, now, log=print):
                     nx = own.get((id(f), str(int(p["p"]) + 1)))
                     if nx and nx[2] == 0:
                         e2 = _vals(f"x{int(nx[1])}:{nx[0]}", 1)
-                for kk, src in (("debt", "debt"), ("cash", "cash"), ("da", "da"), ("fc", "int")):  # 금융비용 = 이자비용
+                for kk, src in (("debt", "debt"), ("cash", "cash"), ("da", "da"), ("fc", "int")):
                     p.pop(kk, None)
                     a0, a1 = e.get(src), e2.get(src) or None  # 0은 '값 없음'(표를 잘못 읽은 경우)
                     val = a0 if a0 is not None else a1  # 그해 원문(최초 공시) 값 우선
                     if val is not None:
                         p[kk] = val
+                # 금융비용 = 이자비용 + 매출채권처분손실 + 자본화된 차입원가(같은 원문에서 읽은 값)
+                if p.get("fc") is not None:
+                    src_e = e if e.get("int") is not None else e2
+                    p["fc"] = round(p["fc"] + (src_e.get("arl") or 0) + (src_e.get("cap") or 0), 1)
                 # 앞뒤가 맞지 않는 값은 쓰지 않는다(원문 표를 잘못 읽은 경우): 차입금 > 부채총계, 현금성자산 > 자산총계,
                 # 차입금이 100억원 이상인데 이자비용이 차입금의 0.3%도 안 되는 경우
                 if p.get("debt") is not None and (p["debt"] < 0 or (p.get("liab") is not None and p["debt"] > p["liab"])):

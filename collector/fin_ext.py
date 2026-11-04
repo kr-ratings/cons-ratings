@@ -9,6 +9,7 @@
         — 단기금융상품이 기타금융자산에 묶여 있으면 그 구성 주석에서 읽는다
   da    감가상각비 + 무형자산상각비(사용권자산 · 투자부동산 상각 포함) — 현금흐름표 조정 항목, 없으면 '영업에서 창출된 현금' 주석
   int   이자비용 — 같은 표, 없으면 금융원가(금융비용) 주석
+  arl   매출채권처분손실, cap 자본화된 차입원가 — 주석(금융비용 = 이자비용 + 매출채권처분손실 + 자본화된 차입원가)
 금액은 억원. 찾지 못한 항목은 넣지 않는다(화면에는 '–').
 """
 import re, time
@@ -17,7 +18,7 @@ from bs4 import BeautifulSoup
 
 import audit_fs
 
-VERSION = 10
+VERSION = 13
 _sp = audit_fs._sp
 
 DEBT = re.compile(r"차입금|차입부채|사채|리스부채|유동화채무|유동성장기(?:부채|채무)|^장기부채$")  # '유동차입금(사채포함)', '단기차입금및유동성차입금' 같은 이름도
@@ -33,6 +34,10 @@ OTH_FA = re.compile(r"^(?:유동|단기)?기타(?:유동)?금융자산$")  # 단
 LEASE_TOT = re.compile(r"^(?:총리스부채|리스부채합계|리스부채총계|리스부채계|리스부채의합계)$")
 LEASE_C = re.compile(r"^(?:유동|단기|유동성)리스부채$")
 LEASE_N = re.compile(r"^(?:비유동|장기)리스부채$")
+LEASE_ANY = re.compile(r"^(?:유동|비유동|단기|장기|유동성)?리스부채$")
+OTH_FL = re.compile(r"^(?:유동|단기|비유동|장기)?기타(?:유동|비유동)?금융부채$")  # 리스부채가 묶일 수 있는 행
+ARL = re.compile(r"^매출채권(?:의)?(?:처분|매각)손실$")
+CAPI = re.compile(r"^(?:당기)?(?:유형자산|재고자산|투자부동산|무형자산|적격자산)?(?:의)?자본화(?:된|한)(?:차입원가|금융원가|금융비용|이자비용|이자)(?:금액)?(?:합계)?$")
 _DA_P = r"(?:유형자산|무형자산|투자부동산|사용권자산|리스사용권자산|리스자산|운휴자산|리스)"
 DA = re.compile(rf"^{_DA_P}?감가상각비$|^{_DA_P}?상각비$|^감가상각비,?{_DA_P}$|^감가상각비및(?:무형자산)?상각비$|^감가상각비와(?:무형자산)?상각비$")
 INT = re.compile(r"^이자비용$")
@@ -171,6 +176,7 @@ def _bs_vals(rows, u):
     """재무상태표 → 기간별 {debt, cash, lease_row, ofa} — lease_row: 리스부채 행이 따로 있음, ofa: 유동 기타금융자산(억원)"""
     np_ = max(len(p) for _, p in rows)
     D = [0.0] * np_; C = [None] * np_; S = [0.0] * np_; O = [0.0] * np_; L = [0.0] * np_
+    OFL = [[] for _ in range(np_)]
     seen_debt = seen_stfi = False
     lease_row = any("리스" in l for l, _ in rows if not re.search(r"자산", l))
     cur = True  # 유동자산 구간
@@ -191,6 +197,10 @@ def _bs_vals(rows, u):
             for i, v in enumerate(per):
                 if v is not None:
                     S[i] += v
+        elif OTH_FL.match(lab):
+            for i, v in enumerate(per):
+                if v:
+                    OFL[i].append(v / u)
         elif cur and OTH_FA.match(lab):
             for i, v in enumerate(per):
                 if v:
@@ -205,6 +215,8 @@ def _bs_vals(rows, u):
             e["cash"] = r(C[i] + S[i])
         e["_lease_row"] = lease_row
         e["_bsl"] = L[i] / u
+        e["_ofl"] = OFL[i]
+        e["_liab"] = next((pv[i] / u for l, pv in rows if l == "부채총계" and len(pv) > i and pv[i]), None)
         if O[i] and not seen_stfi:
             e["_ofa"] = O[i] / u
         out.append(e)
@@ -245,7 +257,7 @@ def _lease_note(soup):
                     if any(abs(a - b - n[0]) <= max(1, abs(a) * 1e-4) for b in plain if b is not a):
                         v = a
                         break
-            elif tot:
+            elif tot and not any(re.search(r"할인되지않은|\d년(?:미만|이내|초과|이하|이상)|개월", l) for l, _ in rows):
                 v = tot[0]
             if v is not None and v > 0:
                 vals[j] = v / u
@@ -259,11 +271,12 @@ def _lease_note(soup):
 
 
 STFI_N = re.compile(r"^(?:장단기|단기)금융상품$|^단기예금$|^정기예금$")
+TOT_N = re.compile(r"합계|소계|^계$")
 
 
-def _stfi_note(soup, target):
-    """기타금융자산에 묶인 단기금융상품: 구성 주석 표에서 합계가 재무상태표 기타금융자산(target, 억원)과 같은 칸 →
-    그 합계 위(앞 합계 다음부터)의 단기금융상품 행 합(억원). 단기금융상품 행이 없는 구성 표뿐이면 0, 표가 없으면 None"""
+def _comp(soup, target, item_rx):
+    """구성 주석 표에서 합계(소계)가 재무상태표 행 값(target, 억원)과 같은 칸 → 그 합계 위(앞 합계 다음부터)
+    item_rx 행의 합(억원). 맞는 구성 표에 해당 행이 없으면 0, 맞는 표가 없으면 None"""
     if target is None:
         return None
     zero = False
@@ -280,10 +293,10 @@ def _stfi_note(soup, target):
                 continue
             l = _label(labs[-1])  # 'XBRL 표: 유동 | 장단기금융상품 | 숫자…' 처럼 이름 칸이 둘인 경우 안쪽 이름
             nums = [audit_fs._num(v) for v in cells[k0:]]
-            if re.search(r"합계|소계|^계$", l):
+            if TOT_N.search(l):
                 for k, v in enumerate(nums):
                     if v is not None and abs(v / u - target) <= max(0.05, abs(target) * 1e-4):
-                        hit = [n[k] or 0 for ll, n in seg if len(n) > k and STFI_N.match(ll)]
+                        hit = [n[k] or 0 for ll, n in seg if len(n) > k and item_rx.search(ll)]
                         if hit:
                             return sum(hit) / u
                         zero = zero or len(seg) >= 2
@@ -291,10 +304,15 @@ def _stfi_note(soup, target):
                 seg = []
             else:
                 seg.append((l, nums))
-    v = _stfi_note_t(soup, target)  # 항목이 열로 놓인(가로) 구성 표
+    v = _comp_t(soup, target, item_rx)  # 항목이 열로 놓인(가로) 구성 표
     if v is not None:
         return v
     return 0.0 if zero else None
+
+
+def _stfi_note(soup, target):
+    """기타금융자산에 묶인 단기금융상품"""
+    return _comp(soup, target, STFI_N)
 
 
 def _expand(tr):
@@ -308,8 +326,8 @@ def _expand(tr):
     return out
 
 
-def _stfi_note_t(soup, target):
-    """'구분 | 장단기금융상품 | 파생상품자산 | … | 합계' 머리글에 '유동' 행이 있는 가로 표: 합계 칸이 target 인 행의 단기금융상품 칸"""
+def _comp_t(soup, target, item_rx):
+    """'구분 | 장단기금융상품 | 파생상품자산 | … | 합계' 머리글에 '유동' 행이 있는 가로 표: 합계 칸이 target 인 행의 해당 항목 칸"""
     for t in soup.find_all("table"):
         if t.find_parent("table") is not None:
             continue
@@ -319,7 +337,7 @@ def _stfi_note_t(soup, target):
         top = cols = tot = None
         for tr in trs[:4]:  # 항목 이름이 든 머리글 행
             h = [re.sub(r"주\d+$", "", _label(x)) for x in _expand(tr)]
-            if any(STFI_N.match(x) for x in h):
+            if any(item_rx.search(x) for x in h):
                 top = h
                 break
         if not top:
@@ -327,7 +345,7 @@ def _stfi_note_t(soup, target):
         groups = {}
         for i, h in enumerate(top):
             groups.setdefault(h, []).append(i)
-        cols = [g for h, g in groups.items() if STFI_N.match(h)]
+        cols = [g for h, g in groups.items() if item_rx.search(h)]
         tot = [i for h, g in groups.items() if re.search(r"합계|^계$", h) for i in g]
         if not tot:
             continue
@@ -341,6 +359,113 @@ def _stfi_note_t(soup, target):
                 # 항목마다 칸이 여럿(총장부금액 · 할인차금 · 손상 · 장부금액)이면 첫 숫자 칸
                 return sum(next((nums[k] for k in g if nums[k] is not None), 0) for g in cols) / u
     return None
+
+
+PPE_W = re.compile(r"유형자산|투자부동산|무형자산|건설중인자산")
+INV_W = re.compile(r"재고자산|용지|미완성")
+CAP_SENT = re.compile(r"(?:유형자산|투자부동산|무형자산)[^.。]{0,40}?자본화(?:된|한)\s*차입원가는?\s*([\d,]+)\s*(백만원|천원|원)"
+                      r"(?:\s*\(\s*전기\s*[:：]?\s*([\d,]+)\s*(백만원|천원|원)?\s*\))?")
+_UW = {"원": 1e8, "천원": 1e5, "백만원": 100}
+
+
+def _cap_item(soup):
+    """자본화된 차입원가(유형자산 · 투자부동산 · 무형자산 · 재고자산) → [당기, 전기](억원).
+    자산 종류별 표가 따로 있으면 더하고, 표가 없으면 '유형자산에 대해 자본화된 차입원가는 18,932백만원
+    (전기: 4,259백만원)' 같은 문장에서 읽는다"""
+    found = {}
+    for t in soup.find_all("table"):
+        if t.find_parent("table") is not None:
+            continue
+        if not any(CAPI.match(_label(c.get_text(" ", strip=True))) for c in t.find_all(["td", "th"])):
+            continue
+        ctx = ""
+        p = t
+        for _ in range(6):  # 표 바로 앞 문단(주석 제목 등)
+            p = p.find_previous(string=re.compile(r"\S")) if p else None
+            if p is None:
+                break
+            if p.find_parent("table") is t:
+                continue
+            ctx = _sp(str(p)) + ctx
+            if len(ctx) > 150:
+                break
+        ctx = ctx[-150:] + _sp(t.get_text(" ", strip=True))[:120]
+        ip = max((m.end() for m in PPE_W.finditer(ctx)), default=-1)
+        ii = max((m.end() for m in INV_W.finditer(ctx)), default=-1)
+        kind = "inv" if ii > ip else "ppe" if ip >= 0 else "gen"
+        r = _item_row(t, CAPI)
+        if r and len(found.setdefault(kind, [])) < 2:
+            found[kind].append(r)
+    if found:
+        kinds = [k for k in ("ppe", "inv") if k in found] or ["gen"]
+        vals = [_pick2(found[k]) for k in kinds]
+        v0 = sum(v[0] for v in vals if v[0] is not None)
+        v1s = [v[1] for v in vals if v[1] is not None]
+        if "ppe" in found:
+            return [v0, sum(v1s) if v1s else None]
+    else:
+        v0, v1s = None, []
+    txt = _sp(soup.get_text(" "))
+    s0 = s1 = None
+    for m in CAP_SENT.finditer(txt.replace(" ", "")):
+        a = audit_fs._num(m.group(1))
+        if a:
+            s0 = (s0 or 0) + a / _UW[m.group(2)]
+        if m.group(3):
+            b = audit_fs._num(m.group(3))
+            if b is not None:
+                s1 = (s1 or 0) + b / _UW[m.group(4) or m.group(2)]
+    if s0 is None:
+        return [v0, sum(v1s) if v1s else None]
+    return [(v0 or 0) + s0, ((sum(v1s) if v1s else 0) + s1) if s1 is not None else (sum(v1s) if v1s else None)]
+
+
+def _item_row(t, rx):
+    """표 하나에서 rx 항목 행 → (당기, 전기 또는 None, XBRL 표 여부) 또는 None"""
+    trs = _trs(t)
+    if len(trs) < 2:
+        return None
+    hs = [_sp(c.get_text()) for c in trs[0].find_all(["th", "td"])]
+    nper = sum(1 for h in hs[1:] if PERIOD_RX.search(h) and "주석" not in h)
+    u = _unit_of(t)
+    for tr in trs[1:]:
+        cells = [c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])]
+        k0 = next((i for i, c in enumerate(cells) if audit_fs._num(c) is not None), len(cells))
+        labs = [c for c in cells[:k0] if _sp(c)]
+        if not labs or not rx.match(_label(labs[-1])):
+            continue
+        nums = [x for x in (audit_fs._num(v) for v in cells[k0:]) if x is not None]
+        if not nums:
+            continue
+        if nper < 2 and any("합계" in h for h in hs[1:]):  # '재고자산 | 유형자산 | 합계' 처럼 나눈 표는 합계 칸
+            nums = nums[-1:]
+        v0 = abs(nums[0]) / u
+        v1 = abs(nums[1]) / u if nper >= 2 and len(nums) >= 2 else None
+        return (v0, v1, "공시금액" in "".join(hs) or nper == 0)
+    return None
+
+
+def _pick2(found):
+    """[(당기, 전기, XBRL)] → [당기, 전기] — XBRL 표는 당기 표 다음 표가 전기"""
+    if not found:
+        return [None, None]
+    v0, v1, xb = found[0]
+    if v1 is None and xb and len(found) > 1:
+        v1 = found[1][0]
+    return [v0, v1]
+
+
+def _note_item(soup, rx):
+    """주석 표에서 rx 항목 값 → [당기, 전기](억원). 처음 나온 표 기준"""
+    found = []
+    for t in soup.find_all("table"):
+        if t.find_parent("table") is None:
+            r = _item_row(t, rx)
+            if r:
+                found.append(r)
+                if len(found) > 1:
+                    break
+    return _pick2(found)
 
 
 def _cur_head(hs):
@@ -387,7 +512,18 @@ def extract(rcept_no, cons, log=print):
     got = lambda k: any(k in e for e in per[:1])
     bs_done = fin_liab = lease_row = False
     ofa = [None, None, None]
+    ofl = [[], [], []]  # 리스부채가 묶일 수 있는 기타금융부채 행(기간별)
     cand_da, cand_da2, cand_int_st, cand_int_nt = [], [], [], []
+    lease_c = [{}, {}]; arl_v = cap_v = None
+
+    def items(soup):  # 금융비용에 더하는 매출채권처분손실 · 자본화된 차입원가(처음 나온 표)
+        nonlocal arl_v, cap_v
+        if arl_v is None:
+            x = _note_item(soup, ARL)
+            arl_v = x if x[0] is not None else None
+        if cap_v is None:
+            x = _cap_item(soup)
+            cap_v = x if x[0] is not None else None
 
     def take(fv, keys):
         for i, e in enumerate(fv[:3]):
@@ -399,7 +535,8 @@ def extract(rcept_no, cons, log=print):
         for rows, u, ctx, is_cf, hs in flows:
             cf = is_cf or bool(re.search(r"현금흐름|창출", nm))
             # 손익계산서(머리글이 모두 기간)는 3개년 칸이어도 이자비용을 읽는다
-            stmt = bool(re.search(r"손익계산서$", nm)) and all(PERIOD_RX.search(h) for h in hs[1:] if h)
+            stmt = bool(re.search(r"손익계산서$|^\d+\.(?:연결)?재무제표$|^\(첨부\)(?:연결)?재무제표$", nm)) and all(
+                PERIOD_RX.search(h) for h in hs[1:] if h)
             fv = _flow_vals(rows, u, cf, stmt)
             if cf and any("da" in e for e in fv):
                 if re.search(r"토지|건물|기계|차량|부동산|구축물|비품|합계$", "".join(hs[1:])) and not any(
@@ -423,15 +560,17 @@ def extract(rcept_no, cons, log=print):
                 lease_row = e.pop("_lease_row")
                 if "_ofa" in e:
                     ofa[i] = e.pop("_ofa")
+                ofl[i] = e.pop("_ofl")
                 per[i].update(e)
             bs_done = True
             fin_liab = any(FIN_LIAB.match(l) for l, _ in bs[0][0])
         collect_flows(flows, _sp(n["text"]), False)
+        items(soup)
     debt_note = bs_done and (not got("debt") or fin_liab)  # 재무상태표를 못 찾은 원문은 차입금을 주석에서 추정하지 않는다
     need_lease = bs_done and not lease_row and (got("debt") or debt_note)
     need_stfi = ofa[0] is not None and "cash" in per[0]
     lease_v = stfi_v = None
-    if not cand_da or not (cand_int_st or any("int" in e for e in min(cand_da)[2][:1])) or debt_note or need_lease or need_stfi:
+    if notes:  # 주석은 항상 읽는다(매출채권처분손실 · 자본화된 차입원가 · 리스부채 · 단기금융상품 구성)
         for n in notes:
             nm = _sp(n["text"])
             if not nm.endswith("주석") and not re.search(r"현금흐름|영업활동|창출|금융수익|금융원가|금융비용|차입금|사채|리스|금융자산|금융상품|손익계산서", nm):
@@ -439,10 +578,18 @@ def extract(rcept_no, cons, log=print):
             soup = _html(rcept_no, n)
             time.sleep(0.2)
             _, flows = _scan_tables(soup, want_bs=False)
-            if need_lease and lease_v is None and (nm.endswith("주석") or "리스" in nm):
-                lv = _lease_note(soup)
-                if lv[0] is not None:
-                    lease_v = lv
+            items(soup)
+            if need_lease:
+                for i in range(2):  # 기타금융부채 구성 표의 리스부채(재무상태표 값과 맞는 표)
+                    for j, tv in enumerate(ofl[i]):
+                        if j not in lease_c[i]:
+                            r = _comp(soup, tv, LEASE_ANY)
+                            if r is not None:
+                                lease_c[i][j] = r
+                if lease_v is None and (nm.endswith("주석") or "리스" in nm):
+                    lv = _lease_note(soup)
+                    if lv[0] is not None:
+                        lease_v = lv
             if need_stfi:
                 stfi_v = stfi_v or [None, None]
                 for i in range(2):
@@ -503,8 +650,20 @@ def extract(rcept_no, cons, log=print):
                     per[0]["debt"] = round(sum(seen.values()), 1)
                     debt_note = False
             collect_flows(flows, nm, True)
-    if bs_done and not fin_liab and "debt" not in per[0] and (per[0].get("int") or 0) < 1:
-        # 재무상태표 · 주석 어디에도 차입금이 없고 이자비용도 1억원 미만: 무차입(리스부채는 아래에서 더함)
+    cand_int_st.sort(key=lambda x: x[3]); cand_int_nt.sort(key=lambda x: x[3])
+    # 현금흐름 조정 표(당기순이익 · 법인세 행이 함께 있는 표)를 먼저, 같은 등급이면 먼저 나온 표
+    best = min(cand_da, key=lambda x: x[:2])[2] if cand_da else (min(cand_da2, key=lambda x: x[:2])[2] if cand_da2 else None)
+    if best:
+        take(best, ("da", "int"))
+    if not got("int"):
+        for fv, cf, ctx, _r in cand_int_st + cand_int_nt:
+            take(fv, ("int",))
+            if got("int"):
+                break
+    lb = per[0].get("_liab") or 0
+    if bs_done and not fin_liab and "debt" not in per[0] and (per[0].get("int") or 0) <= max(1, lb * 0.005):
+        # 재무상태표 · 주석 어디에도 차입금이 없고 이자비용도 부채총계의 0.5% 이하(리스 · 보증금 이자 수준): 무차입
+        # (리스부채는 아래에서 더함)
         for e in per:
             if "cash" in e:
                 e["debt"] = 0.0
@@ -513,7 +672,12 @@ def extract(rcept_no, cons, log=print):
             e.pop("debt", None)
         if debt_note:  # 주석에서도 차입금 구성을 못 찾음
             per[0].pop("debt", None)
-    if lease_v is not None:  # 재무상태표에 리스부채 행이 없어 주석의 리스부채 합계를 더함
+    if need_lease:
+        # 재무상태표에 리스부채 행이 없음: 기타금융부채 구성 표의 리스부채(장부금액)를 먼저, 없으면 리스 주석의 합계
+        lc = [sum(lease_c[i].values()) if lease_c[i] else None for i in range(2)]
+        if lc[0]:
+            lease_v = [lc[0], lc[1] if lc[1] else None]
+    if lease_v is not None:
         for i in range(3):
             if "debt" in per[i]:
                 if i < 2 and lease_v[i] is not None:
@@ -525,16 +689,11 @@ def extract(rcept_no, cons, log=print):
             # 구성 주석을 못 찾으면 현금성자산은 재무상태표 행만으로 둔다(빈칸보다 낫고, 순차입금이 다소 크게 잡힘)
             if ofa[i] is not None and "cash" in per[i] and stfi_v is not None and i < 2 and stfi_v[i] is not None:
                 per[i]["cash"] = round(per[i]["cash"] + stfi_v[i], 1)
+    for i in range(2):  # 금융비용 = 이자비용 + 매출채권처분손실 + 자본화된 차입원가
+        for k, x in (("arl", arl_v), ("cap", cap_v)):
+            if x and x[i] is not None and x[i] > 0:
+                per[i][k] = round(x[i], 1)
     for e in per:
         e.pop("_bsl", None)
-    cand_int_st.sort(key=lambda x: x[3]); cand_int_nt.sort(key=lambda x: x[3])
-    # 현금흐름 조정 표(당기순이익 · 법인세 행이 함께 있는 표)를 먼저, 같은 등급이면 먼저 나온 표
-    best = min(cand_da, key=lambda x: x[:2])[2] if cand_da else (min(cand_da2, key=lambda x: x[:2])[2] if cand_da2 else None)
-    if best:
-        take(best, ("da", "int"))
-    if not got("int"):
-        for fv, cf, ctx, _r in cand_int_st + cand_int_nt:
-            take(fv, ("int",))
-            if got("int"):
-                break
+        e.pop("_liab", None)
     return {"v": VERSION, "periods": per}
