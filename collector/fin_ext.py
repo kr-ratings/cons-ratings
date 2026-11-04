@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 import audit_fs
 
-VERSION = 3
+VERSION = 4
 _sp = audit_fs._sp
 
 DEBT = re.compile(r"차입금|사채|리스부채|유동화채무|유동성장기부채|^장기부채$")  # '유동차입금(사채포함)', '단기차입금및유동성차입금' 같은 이름도
@@ -264,10 +264,39 @@ def extract(rcept_no, cons, log=print):
                     for l, pv in rows:
                         if DEBT_STRICT.match(l) and l not in seen and pv and pv[0] is not None:
                             seen[l] = pv[0] / u
+                has_b = lambda d: any(re.search(r"차입금|사채|장기부채", l) for l in d)  # 리스부채만 있는 표는 차입금 표가 아님
+                if len(seen) < 2 or not has_b(seen):
+                    seen = {}
+                    # 구성 표가 없으면 재무활동 부채 변동 표(기초 · 증감 · 기말)의 기말 칸 — 당기 표가 먼저 나온다
+                    for t in soup.find_all("table"):
+                        if t.find_parent("table") is not None:
+                            continue
+                        trs = t.find_all("tr")
+                        if not trs:
+                            continue
+                        hs = [_sp(c.get_text()) for c in trs[0].find_all(["th", "td"])]
+                        if not (any(h.startswith("기초") for h in hs) and any(h.startswith("기말") for h in hs)):
+                            continue
+                        u = _unit_of(t)
+                        got_ = {}
+                        for tr in trs[1:]:
+                            cells = [c.get_text(" ", strip=True) for c in tr.find_all(["td", "th"])]
+                            if len(cells) < 3:
+                                continue
+                            l = _label(cells[0])
+                            nums = [audit_fs._num(v) for v in cells[1:]]
+                            if DEBT_STRICT.match(l) and nums and nums[-1] is not None and l not in got_:
+                                got_[l] = nums[-1] / u
+                        if len(got_) >= 2 and has_b(got_):
+                            seen = got_
+                            break
                 if len(seen) >= 2:
                     per[0]["debt"] = round(sum(seen.values()), 1)
                     debt_note = False
             collect_flows(flows, nm, True)
+    if fin_liab and debt_note:  # 차입금을 금융부채로 묶은 재무상태표인데 주석에서 차입금 구성을 못 찾음 → 일부만 더한 값은 쓰지 않는다
+        for e in per:
+            e.pop("debt", None)
     best = (cand_da or cand_da2 or [None])[0]
     if best:
         take(best, ("da", "int"))

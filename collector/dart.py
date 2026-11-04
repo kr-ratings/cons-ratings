@@ -694,16 +694,28 @@ def collect(rows, prev, now, log=print):
         left = sum(1 for no, cons in need if f"x{int(cons)}:{no}" not in afs_cache)
         log(f"재무지표 원문 {len(need) - left}/{len(need)}건 읽음 · 남은 {left}건")
         metrics_ready = left == 0
+        def _vals(key, i):
+            x = afs_cache.get(key)
+            vals = (x or {}).get("periods") or []
+            return vals[i] if i < len(vals) else {}
         for k, v, plan in tasks:
+            own = {(id(f), p["p"]): (no, cons, i) for f, p, no, cons, i in plan}
             for f, p, no, cons, i in plan:
-                x = afs_cache.get(f"x{int(cons)}:{no}")
-                vals = (x or {}).get("periods") or []
-                e = vals[i] if i < len(vals) else {}
-                p["xs"] = f"x{int(cons)}:{no}#{i}"  # 어느 원문의 몇 번째 기간에서 읽었는지(점검용)
+                key = f"x{int(cons)}:{no}"
+                e = _vals(key, i)
+                p["xs"] = f"{key}#{i}"  # 어느 원문의 몇 번째 기간에서 읽었는지(점검용)
+                # 같은 해 숫자는 다음 해 원문의 전기 칸에도 있다: 두 값이 3% 넘게 다르면 다음 해 원문(재작성 반영) 값을 쓴다
+                e2 = {}
+                if p["t"] == "FY" and i == 0:
+                    nx = own.get((id(f), str(int(p["p"]) + 1)))
+                    if nx and nx[2] == 0:
+                        e2 = _vals(f"x{int(nx[1])}:{nx[0]}", 1)
                 for kk, src in (("debt", "debt"), ("cash", "cash"), ("da", "da"), ("fc", "int")):  # 금융비용 = 이자비용
                     p.pop(kk, None)
-                    if e.get(src) is not None:
-                        p[kk] = e[src]
+                    a0, a1 = e.get(src), e2.get(src)
+                    val = a1 if (a0 is not None and a1 is not None and abs(a0 - a1) > max(1, 0.03 * max(abs(a0), abs(a1)))) else (a0 if a0 is not None else a1)
+                    if val is not None:
+                        p[kk] = val
                 # 앞뒤가 맞지 않는 값은 쓰지 않는다(원문 표를 잘못 읽은 경우): 차입금 > 부채총계, 현금성자산 > 자산총계,
                 # 차입금이 100억원 이상인데 이자비용이 차입금의 0.3%도 안 되는 경우
                 if p.get("debt") is not None and p.get("liab") is not None and p["debt"] > p["liab"]:
