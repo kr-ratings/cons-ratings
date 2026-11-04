@@ -997,7 +997,8 @@ const FINK_NEW=[["매출액","rev","amt",1],["EBIT","op","amt"],["EBITDA","ebitd
 const FIN_NOTE_NEW="EBIT = 영업이익, EBITDA = 영업이익 + 감가상각비 · 무형자산상각비(사용권자산 · 투자부동산 포함, 현금흐름표 조정 항목 기준), 총차입금 = 단기 · 장기차입금 + 사채 + 리스부채(유동성 포함), 순차입금 = 총차입금 − 현금및현금성자산 · 단기금융상품, 금융비용 = 이자비용, 부채비율 = 부채총계 ÷ 자본총계, 차입금의존도 = 총차입금 ÷ 총자산. 차입금 · 현금 · 감가상각비 · 이자비용은 DART 원문의 재무상태표 · 현금흐름표 · 주석에서 읽은 값이며, 찾지 못한 항목은 – 로 표시";
 // 주요 재무지표(차입금 · EBITDA 등) 원문 읽기가 100개사 모두 끝나기 전에는(dart.json metrics_ready) 예전 재무 요약 양식으로 보여 준다
 const FINK_OLD=[["매출액","rev","amt"],["영업이익","op","amt"],["영업이익률","opm","pct"],["당기순이익","ni","amt"],["자산총계","assets","amt"],["부채총계","liab","amt"],["자본총계","equity","amt"],["부채비율","dr","pct"]];
-const MR=()=>!!(DART&&DART.metrics_ready);
+const METRICS_ON=false; // 원문 숫자 점검이 끝나면 true — 그 전에는 예전 재무 요약 양식
+const MR=()=>METRICS_ON&&!!(DART&&DART.metrics_ready);
 const finK=()=>MR()?FINK_NEW:FINK_OLD;
 const finNote=()=>MR()?FIN_NOTE_NEW:"부채비율 = 부채총계 ÷ 자본총계";
 const finTitle=()=>MR()?"주요 재무지표":"재무 요약";
