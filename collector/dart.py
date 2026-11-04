@@ -699,10 +699,19 @@ def collect(rows, prev, now, log=print):
                 x = afs_cache.get(f"x{int(cons)}:{no}")
                 vals = (x or {}).get("periods") or []
                 e = vals[i] if i < len(vals) else {}
+                p["xs"] = f"x{int(cons)}:{no}#{i}"  # 어느 원문의 몇 번째 기간에서 읽었는지(점검용)
                 for kk, src in (("debt", "debt"), ("cash", "cash"), ("da", "da"), ("fc", "int")):  # 금융비용 = 이자비용
                     p.pop(kk, None)
                     if e.get(src) is not None:
                         p[kk] = e[src]
+                # 앞뒤가 맞지 않는 값은 쓰지 않는다(원문 표를 잘못 읽은 경우): 차입금 > 부채총계, 현금성자산 > 자산총계,
+                # 차입금이 100억원 이상인데 이자비용이 차입금의 0.3%도 안 되는 경우
+                if p.get("debt") is not None and p.get("liab") is not None and p["debt"] > p["liab"]:
+                    p.pop("debt")
+                if p.get("cash") is not None and p.get("assets") is not None and p["cash"] > p["assets"]:
+                    p.pop("cash")
+                if p.get("fc") is not None and (p.get("debt") or 0) >= 100 and p["fc"] < p["debt"] * 0.003:
+                    p.pop("fc")
                 ratios(p)
                 f.setdefault("xr", [])
                 if f"x{int(cons)}:{no}" not in f["xr"]:

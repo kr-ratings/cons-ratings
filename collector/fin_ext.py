@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 import audit_fs
 
-VERSION = 2
+VERSION = 3
 _sp = audit_fs._sp
 
 DEBT = re.compile(r"차입금|사채|리스부채|유동화채무|유동성장기부채|^장기부채$")  # '유동차입금(사채포함)', '단기차입금및유동성차입금' 같은 이름도
@@ -104,6 +104,9 @@ def _pick_nodes(nodes, cons):
             st.append(n)
         elif re.search(r"주석$|^\d+(-\d+)?\.", t) and not re.search(r"요약재무|재무에관한사항|회사의개요|사업의내용|이사회|주주|임원|계열회사|감사인|그밖에|상세표|배당|자금조달|기타재무", t):
             notes.append(n)
+    if not st:  # 예전 사업보고서: '2.연결재무제표' · '4.재무제표' 한 노드에 재무제표가 모두 들어 있다
+        st = [n for n in nodes if n.get("dcmNo") and re.match(r"^\d+\.(연결)?재무제표$", tx(n)) and (("연결" in tx(n)) == cons or not has_c)]
+        notes = [n for n in notes if n not in st]
     if not st:  # 감사보고서에서 연결 · 별도 노드 이름이 따로 없는 경우
         st = [n for n in nodes if n.get("dcmNo") and re.search(r"^\(첨부\)", tx(n))]
     if not notes:
@@ -232,7 +235,7 @@ def extract(rcept_no, cons, log=print):
             bs_done = True
             fin_liab = any(FIN_LIAB.match(l) for l, _ in bs[0][0])
         collect_flows(flows, _sp(n["text"]), False)
-    debt_note = not got("debt") or (bs_done and fin_liab)
+    debt_note = bs_done and (not got("debt") or fin_liab)  # 재무상태표를 못 찾은 원문은 차입금을 주석에서 추정하지 않는다
     if not cand_da or not (cand_int_st or any("int" in e for e in cand_da[0][:1])) or debt_note:
         for n in notes:
             nm = _sp(n["text"])
