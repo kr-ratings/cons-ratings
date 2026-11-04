@@ -613,6 +613,7 @@ def collect(rows, prev, now, log=print):
     # 사업·분기보고서를 내지 않는 회사(비상장 외감법인)는 감사보고서 본문에서 재무를 읽는다(재무 갱신 때만).
     # 한 번 읽은 감사보고서는 접수번호별로 저장해 두고 다시 받지 않는다.
     afs_cache = dict(prev.get("afs") or {})
+    metrics_ready = prev.get("metrics_ready", False)  # 주요 재무지표 원문을 모두 읽었는지(화면은 그때부터 새 양식)
     if fin_checked == today.isoformat():
         import audit_fs
         for k, v in co.items():
@@ -674,17 +675,25 @@ def collect(rows, prev, now, log=print):
         need = {(no, cons) for _, _, plan in tasks for (_f, _p, no, cons, _i) in plan if f"x{int(cons)}:{no}" not in afs_cache
                 or afs_cache[f"x{int(cons)}:{no}"].get("v") != fin_ext.VERSION}
 
+        # 원문 읽기는 한 번에 오래 걸리므로(처음 한 번 약 1,000건) 실행마다 시간 한도 안에서만 읽고, 나머지는 다음 실행에서 잇는다.
+        deadline = time.time() + float(os.environ.get("FIN_EXT_MINUTES", "25")) * 60
+
         def _ext(job):
             no, cons = job
+            if time.time() > deadline:
+                return job, None
             try:
                 return job, fin_ext.extract(no, cons, log)
             except Exception as e:
                 log(f"재무지표 원문 읽기 실패 {no}: {e}")
                 return job, None
-        with cfu.ThreadPoolExecutor(4) as ex:
+        with cfu.ThreadPoolExecutor(6) as ex:
             for (no, cons), x in ex.map(_ext, sorted(need)):
                 if x:
                     afs_cache[f"x{int(cons)}:{no}"] = x
+        left = sum(1 for no, cons in need if f"x{int(cons)}:{no}" not in afs_cache)
+        log(f"재무지표 원문 {len(need) - left}/{len(need)}건 읽음 · 남은 {left}건")
+        metrics_ready = left == 0
         for k, v, plan in tasks:
             for f, p, no, cons, i in plan:
                 x = afs_cache.get(f"x{int(cons)}:{no}")
@@ -722,7 +731,8 @@ def collect(rows, prev, now, log=print):
     keep |= {"sh4:" + v["sh"]["no"] for v in co.values() if v.get("sh") and v["sh"].get("no")}
     afs_cache = {r: x for r, x in afs_cache.items() if r in keep}
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")
-    return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors, "afs": afs_cache}
+    return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors, "afs": afs_cache,
+            "metrics_ready": metrics_ready}
 
 
 def backlog_collect(res, rows, prev_bl, now, log=print):

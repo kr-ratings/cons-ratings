@@ -960,12 +960,12 @@ async function coXLSX(btn,r,what){
       cols=[{wch:30},{wch:14},{wch:11}];
       for(let i=4;i<aoa.length-2;i++) fmt.push([i,2,"0.0"]);
     }else{
-      const f=finSel(dc), ps=finPeriods(f); title="주요재무지표";
-      const K=FINK.map(([lb,k,t])=>[lb+(t==="pct"?"(%)":t==="x"?"(배)":""),k,t]);
-      aoa=[[`${nm} 주요 재무지표`],[`${f.basis} 기준 · 단위: 억원, %, 배 · 출처: DART ${f.src||"정기보고서(사업·반기·분기보고서)"}${f.audit_no?" ("+dartUrl(f.audit_no)+")":""}`],[],
+      const f=finSel(dc), ps=finPeriods(f); title=finTitle().replace(" ","");
+      const K=finK().map(([lb,k,t])=>[lb+(t==="pct"?"(%)":t==="x"?"(배)":""),k,t]);
+      aoa=[[`${nm} ${finTitle()}`],[`${f.basis} 기준 · 단위: 억원, %, 배 · 출처: DART ${f.src||"정기보고서(사업·반기·분기보고서)"}${f.audit_no?" ("+dartUrl(f.audit_no)+")":""}`],[],
         ["구분",...ps.map(p=>p.t==="FY"?`${p.p}${p.b?` (${p.b})`:""}`:p.p)]];
       for(const [lb2,k] of K) aoa.push([lb2,...ps.map(p=>r1(p[k]))]);
-      aoa.push([],[(ps.some(p=>p.t!=="FY")?"분기 열은 올해 누적 실적과 분기말 재무상태입니다(순차입금/EBITDA는 EBITDA 연환산). ":"")+FIN_NOTE+"."]);
+      aoa.push([],[(ps.some(p=>p.t!=="FY")?qNote():"")+finNote()+"."]);
       cols=[{wch:16},...ps.map(()=>({wch:12}))];
       K.forEach(([,k,t],j)=>ps.forEach((_,c)=>fmt.push([4+j,1+c,t==="amt"?"#,##0":"0.0"])));
     }
@@ -991,10 +991,17 @@ function copyText(t,msg){
 // 재무 기준: 연결이 있으면 연결이 기본, 상세 화면의 전환 버튼으로 별도(fin_s)를 볼 수 있다. 엑셀 · 워드도 고른 기준으로 나간다.
 let FINB="연결";
 // 주요 재무지표 행: [이름, 키, 형식(amt 억원 · pct % · x 배), 묶음 시작]
-const FINK=[["매출액","rev","amt",1],["EBIT","op","amt"],["EBITDA","ebitda","amt"],["당기순이익","ni","amt"],
+const FINK_NEW=[["매출액","rev","amt",1],["EBIT","op","amt"],["EBITDA","ebitda","amt"],["당기순이익","ni","amt"],
   ["총자산","assets","amt",1],["총차입금","debt","amt"],["순차입금","nd","amt"],
   ["EBIT마진","opm","pct",1],["EBITDA마진","ebitdam","pct"],["EBITDA/금융비용","cov","x"],["순차입금/EBITDA","nde","x"],["부채비율","dr","pct"],["차입금의존도","dep","pct"]];
-const FIN_NOTE="EBIT = 영업이익, EBITDA = 영업이익 + 감가상각비 · 무형자산상각비(사용권자산 · 투자부동산 포함, 현금흐름표 조정 항목 기준), 총차입금 = 단기 · 장기차입금 + 사채 + 리스부채(유동성 포함), 순차입금 = 총차입금 − 현금및현금성자산 · 단기금융상품, 금융비용 = 이자비용, 부채비율 = 부채총계 ÷ 자본총계, 차입금의존도 = 총차입금 ÷ 총자산. 차입금 · 현금 · 감가상각비 · 이자비용은 DART 원문의 재무상태표 · 현금흐름표 · 주석에서 읽은 값이며, 찾지 못한 항목은 – 로 표시";
+const FIN_NOTE_NEW="EBIT = 영업이익, EBITDA = 영업이익 + 감가상각비 · 무형자산상각비(사용권자산 · 투자부동산 포함, 현금흐름표 조정 항목 기준), 총차입금 = 단기 · 장기차입금 + 사채 + 리스부채(유동성 포함), 순차입금 = 총차입금 − 현금및현금성자산 · 단기금융상품, 금융비용 = 이자비용, 부채비율 = 부채총계 ÷ 자본총계, 차입금의존도 = 총차입금 ÷ 총자산. 차입금 · 현금 · 감가상각비 · 이자비용은 DART 원문의 재무상태표 · 현금흐름표 · 주석에서 읽은 값이며, 찾지 못한 항목은 – 로 표시";
+// 주요 재무지표(차입금 · EBITDA 등) 원문 읽기가 100개사 모두 끝나기 전에는(dart.json metrics_ready) 예전 재무 요약 양식으로 보여 준다
+const FINK_OLD=[["매출액","rev","amt"],["영업이익","op","amt"],["영업이익률","opm","pct"],["당기순이익","ni","amt"],["자산총계","assets","amt"],["부채총계","liab","amt"],["자본총계","equity","amt"],["부채비율","dr","pct"]];
+const MR=()=>!!(DART&&DART.metrics_ready);
+const finK=()=>MR()?FINK_NEW:FINK_OLD;
+const finNote=()=>MR()?FIN_NOTE_NEW:"부채비율 = 부채총계 ÷ 자본총계";
+const finTitle=()=>MR()?"주요 재무지표":"재무 요약";
+const qNote=()=>MR()?"분기 열은 올해 누적 실적과 분기말 재무상태입니다(순차입금/EBITDA는 EBITDA 연환산). ":"분기 열은 올해 누적 실적과 분기말 재무상태입니다. ";
 function finSel(dc){ return dc?(FINB==="별도"&&dc.fin_s?dc.fin_s:dc.fin)||null:null; }
 function finOf(reg){ return finSel(DART&&DART.co&&DART.co[reg]); }
 function finPeriods(f){
@@ -1224,17 +1231,17 @@ function appendixXML(r){
     out.push(WX.table(w,rows));
   } else out.push(WX.p("감사보고서와 DART 공시에 주주별 지분 구성이 공개되어 있지 않습니다.",{sz:18}));
   // 3. 주요 재무지표
-  out.push(WX.h("3. 주요 재무지표"));
+  out.push(WX.h(`3. ${MR()?"주요 재무지표":"요약 재무제표"}`));
   const f=finSel(dc), ps=finPeriods(f);
   if(ps.length){
     out.push(WX.note(`(단위: 억원, 배, %, 기준: ${f.basis}, 출처: Dart 공시${f.src&&f.src!=="사업보고서"?` ${f.src}`:""})`));
     const cw=Math.floor((W_FULL-1418)/ps.length), widths=[1418,...ps.map((_,k)=>k<ps.length-1?cw:W_FULL-1418-cw*(ps.length-1))];
-    const K=FINK.map(([lb,k,t,g])=>[lb,k,t==="amt"?wn:wp,g]);
+    const K=finK().map(([lb,k,t,g])=>[lb,k,t==="amt"?wn:wp,g]);
     out.push(WX.table(widths,[[H("구 분"),...ps.map(p=>H(wPer(p)))],...K.map(([lb,k,fm,g],i)=>[L(lb),...ps.map(p=>N(fm(p[k])))].map(c=>g&&i?{...c,top:12}:c))]));
     const notes=[];
     if(ps.some(p=>p.t!=="FY")) notes.push("분기·반기 열은 해당 연도 누적 실적과 분기말 재무상태(순차입금/EBITDA는 EBITDA 연환산)");
     if(ps.some(p=>p.b)) notes.push("* 표시 연도는 "+[...new Set(ps.filter(p=>p.b).map(p=>p.b))].join("·")+" 기준");
-    notes.push(FIN_NOTE);
+    notes.push(finNote());
     out.push(WX.p("주) "+notes.join(" / "),{sz:16,spacing:'<w:spacing w:before="40"/>'}));
   } else out.push(WX.p("DART에서 이 회사의 재무를 찾지 못했습니다.",{sz:18}));
   // 4. 수주 현황
@@ -1434,10 +1441,10 @@ function coHTML(r){
   let fin;
   if(ps.length){
     const xS=v=>v==null?"–":`${v.toFixed(1)}배`, FM={amt:won,pct:pctS,x:xS};
-    const rowsF=FINK.map(([lb,k,t,g])=>[lb,k,FM[t],g]);
+    const rowsF=finK().map(([lb,k,t,g])=>[lb,k,FM[t],g]);
     fin=`<div class="fin-box"><table class="mini"><thead><tr><th>${f.basis} · 억원</th>${ps.map(p=>`<th class="n">${p.t==="FY"?p.p:p.p.replace(" ","<br>")}${p.b?`<br><span class="dim" style="font-weight:400">${p.b}</span>`:""}</th>`).join("")}</tr></thead><tbody>${rowsF.map(([lb,k,fm,g],i)=>`<tr${g&&i?' class="gs"':""}><td>${lb}</td>${ps.map(p=>`<td class="n">${fm(p[k])}</td>`).join("")}</tr>`).join("")}</tbody></table></div>${f.src==="감사보고서"||f.src==="사업보고서 원문"
-      ?`<p class="hint" style="margin-top:6px">${f.src==="감사보고서"?"감사보고서":"사업보고서"} 원문의 재무제표에서 읽은 숫자입니다${f.src==="감사보고서"?"(비상장 외부감사 대상 회사라 반기·분기 실적은 공시되지 않습니다)":""}. 최근 원문: <a href="${dartUrl(f.audit_no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(f.audit_nm||"원문")}</a>.${ps.some(p=>p.b)?" 연도 아래 '연결'·'별도' 표시는 그해만 기준이 다른 경우입니다.":""} ${FIN_NOTE}.${ps.some(p=>p.t!=="FY")?" 분기 열의 순차입금/EBITDA는 EBITDA를 연환산했습니다.":""}</p>`
-      :`<p class="hint" style="margin-top:6px">분기 열은 올해 누적 실적과 분기말 재무상태입니다(순차입금/EBITDA는 EBITDA 연환산). ${FIN_NOTE}.</p>`}`;
+      ?`<p class="hint" style="margin-top:6px">${f.src==="감사보고서"?"감사보고서":"사업보고서"} 원문의 재무제표에서 읽은 숫자입니다${f.src==="감사보고서"?"(비상장 외부감사 대상 회사라 반기·분기 실적은 공시되지 않습니다)":""}. 최근 원문: <a href="${dartUrl(f.audit_no)}" target="_blank" rel="noopener" style="color:var(--accent)">${esc(f.audit_nm||"원문")}</a>.${ps.some(p=>p.b)?" 연도 아래 '연결'·'별도' 표시는 그해만 기준이 다른 경우입니다.":""} ${finNote()}.${MR()&&ps.some(p=>p.t!=="FY")?" 분기 열의 순차입금/EBITDA는 EBITDA를 연환산했습니다.":""}</p>`
+      :`<p class="hint" style="margin-top:6px">${qNote()}${finNote()}.</p>`}`;
   } else if(!DART){
     fin='<p class="hint">재무·공시 데이터는 준비 중입니다.</p>';
   } else if(dc&&dc.audit){
@@ -1457,7 +1464,7 @@ function coHTML(r){
         <button type="button" class="dl" id="dr-doc" title="회사 개요 · 주주 · 주요 재무지표 · 수주 · 보증·약정을 심의서 Appendix 양식의 워드 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>심의서 Appendix(워드)</button></div>
       <div class="card"><h3>회사 개요 <span>DART 기업개황</span></h3>${overviewHTML(r,dc)}</div>
       <div class="card"><h3>주주 현황 ${dc&&dc.sh?`<button type="button" class="xlb" id="xl-sh" title="주주 현황을 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`:""}</h3>${holdersHTML(dc)}</div>
-      <div class="card"><h3>주요 재무지표 <span class="h3r">${dc&&dc.fin&&dc.fin_s?`<span class="seg finb" role="group" aria-label="재무 기준">${["연결","별도"].map(x=>`<button type="button" data-b="${x}" aria-pressed="${(f&&f.basis)===x}">${x}</button>`).join("")}</span>`:""}${dc?`<a href="${dartCo}" target="_blank" rel="noopener">DART 공시 검색 →</a>`:""}${ps.length?`<button type="button" class="xlb" id="xl-fin" title="주요 재무지표를 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`:""}</span></h3>${fin}</div>
+      <div class="card"><h3>${finTitle()} <span class="h3r">${dc&&dc.fin&&dc.fin_s?`<span class="seg finb" role="group" aria-label="재무 기준">${["연결","별도"].map(x=>`<button type="button" data-b="${x}" aria-pressed="${(f&&f.basis)===x}">${x}</button>`).join("")}</span>`:""}${dc?`<a href="${dartCo}" target="_blank" rel="noopener">DART 공시 검색 →</a>`:""}${ps.length?`<button type="button" class="xlb" id="xl-fin" title="주요 재무지표를 엑셀 파일로 받습니다"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M2.5 13.5h11"/></svg>엑셀</button>`:""}</span></h3>${fin}</div>
       ${ordCard(r)}
       ${cgCard(r)}
       <div class="card"><h3>신용등급 <span>평가사 3사 현재</span></h3><div class="rnow">${now}</div>${histT}</div>
