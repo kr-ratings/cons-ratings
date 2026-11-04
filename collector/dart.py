@@ -289,7 +289,8 @@ def ratios(p):
     if p.get("op") is not None and p.get("da") is not None:
         p["ebitda"] = p["op"] + p["da"]
     if p.get("debt") is not None:
-        p["nd"] = p["debt"] - (p.get("cash") or 0)
+        if p.get("cash") is not None:
+            p["nd"] = round(p["debt"] - p["cash"], 1)
         if p.get("assets"):
             p["dep"] = round(p["debt"] / p["assets"] * 100, 1)
     if p.get("ebitda") is not None and p.get("rev"):
@@ -299,67 +300,6 @@ def ratios(p):
     if p.get("nd") is not None and p.get("ebitda"):
         e = p["ebitda"] * ANNUAL.get(p.get("t"), 1)
         p["nde"] = round(p["nd"] / e, 1) if e > 0 else None
-
-
-# 전체 재무제표(fnlttSinglAcntAll)에서 주요 재무지표 항목 — 이름 전체가 맞는 계정만, 액면 · 할인차금 같은 세부 계정은 뺀다
-import audit_fs as _afs
-X_NOT_ID = re.compile(r"Nominal|Discount|Premium|Adjustment(?!sFor)", re.I)
-
-
-def _xsum(xs, rx, not_rx=None, col="thstrm_amount", once=False):
-    std = {_afs._sp(x["account_nm"]) for x in xs if not x.get("account_id", "").startswith("-")}
-    tot, seen = None, set()
-    for x in xs:
-        nm = _afs._label(x.get("account_nm", ""))
-        if not rx.search(nm) or (not_rx and not_rx.search(nm)) or X_NOT_ID.search(x.get("account_id", "")):
-            continue
-        if x.get("account_id", "").startswith("-") and _afs._sp(x["account_nm"]) in std:
-            continue  # 표준계정과 이름이 같은 비표준 세부 계정(중복)
-        if once and nm in seen:
-            continue
-        seen.add(nm)
-        v = _amt(x.get(col))
-        if v is not None:
-            tot = (tot or 0) + abs(v)
-    return tot
-
-
-def api_extra(D, corp_code, ent, fs, today):
-    """fin 시리즈(연결이면 CFS, 별도면 OFS)의 연도 · 분기에 차입금 · 현금성자산 · 금융비용 · 감가상각비를 채운다"""
-    ps = {p["p"]: p for p in ent["periods"]}
-    fys = sorted(int(p["p"]) for p in ent["periods"] if p["t"] == "FY")
-    calls = []
-    if fys:
-        # 사업보고서 한 건에 재무상태 · 손익은 3개년, 현금흐름은 2개년이 있어 2년 간격으로 받는다
-        calls += [(y, "11011") for y in (fys[-1], fys[-1] - 2, fys[-1] - 4) if y >= fys[0]]
-    q = next((p for p in ent["periods"] if p["t"] != "FY"), None)
-    if q:
-        code = {lb: c for c, lb in REPRT}.get(q["t"])
-        if code:
-            calls.append((int(q["p"][:4]), code))
-    for y, code in calls:
-        d = D.json("fnlttSinglAcntAll.json", corp_code=corp_code, bsns_year=y, reprt_code=code, fs_div=fs)
-        if d.get("status") != "000":
-            continue
-        L = d.get("list", [])
-        by = lambda sj: [x for x in L if x.get("sj_div") in sj]
-        BS, IS, CF = by(("BS",)), by(("IS", "CIS")), by(("CF",))
-        cols = [("thstrm_amount", 0), ("frmtrm_amount", 1), ("bfefrmtrm_amount", 2)] if code == "11011" else [("thstrm_amount", 0)]
-        for col, off in cols:
-            key = f"{y - off}" if code == "11011" else q["p"]
-            p = ps.get(key)
-            if not p:
-                continue
-            flow = "thstrm_add_amount" if (code != "11011" and col == "thstrm_amount" and any(x.get("thstrm_add_amount") for x in IS)) else col
-            vals = {"debt": _xsum(BS, _afs.DEBT_RX, _afs.DEBT_NOT, col), "cash": _xsum(BS, _afs.CASH_RX, None, col),
-                    "fc": next((v for rx in _afs.FC_RX for v in [_xsum(IS, rx, None, flow, once=True)] if v is not None), None),
-                    "da": _xsum(CF, _afs.DA_RX, None, col, once=True)}
-            for k, v in vals.items():
-                if v is not None and p.get(k) is None:
-                    p[k] = v
-        time.sleep(0.15)
-    for p in ent["periods"]:
-        ratios(p)
 
 
 AUD_RX = re.compile(r"^(?:\[[^\]]*\])?\s*(연결)?감사보고서\s*\((\d{4})\.(\d{2})\)")
@@ -385,6 +325,40 @@ def _reports(D, corp_code, since, ty, rx, kind):
         if page >= int(d.get("total_page") or 1):
             break
         page += 1
+    return out
+
+
+def ext_plan(D, v, today):
+    """회사 하나의 재무 시리즈(기본 · 별도)마다 [(시리즈, 기간, 원문 접수번호, 연결 여부, 원문 안 기간 순번)]
+    — 사업연도는 그해 보고서(사업보고서 또는 같은 기준 감사보고서)의 당기, 없으면 다음 해 보고서의 전기. 분기는 그 분기보고서."""
+    since = (today - dt.timedelta(days=365 * 7)).strftime("%Y%m%d")
+    reps = None
+    out = []
+    for f in (v.get("fin"), v.get("fin_s")):
+        if not f:
+            continue
+        f.pop("xr", None)
+        cons = f["basis"] == "연결"
+        if reps is None:
+            reps = _reports(D, v["corp_code"], since, "F", AUD_RX, "audit")
+            reps.update(_reports(D, v["corp_code"], since, "A", BIZ_RX, "biz"))
+        by_y = {}
+        for r in reps.values():
+            ok = (r["kind"] == "audit" and r["c"] == cons) if f.get("src") == "감사보고서" else r["kind"] == "biz"
+            if ok and (r["y"] not in by_y or r["no"] > by_y[r["y"]]["no"]):
+                by_y[r["y"]] = r
+        for p in f["periods"]:
+            if p["t"] != "FY":
+                if f.get("q_rcept"):
+                    out.append((f, p, f["q_rcept"], cons, 0))
+                continue
+            y = int(p["p"])
+            if y in by_y:
+                out.append((f, p, by_y[y]["no"], cons, 0))
+            elif y + 1 in by_y:
+                out.append((f, p, by_y[y + 1]["no"], cons, 1))
+            elif y + 2 in by_y:
+                out.append((f, p, by_y[y + 2]["no"], cons, 2))
     return out
 
 
@@ -681,16 +655,6 @@ def collect(rows, prev, now, log=print):
                         ratios(p)
             except Exception as e:
                 errors.append(f"재무 보완 {k}: {str(e)[:60]}")
-        # 주요 재무지표(차입금 · 현금성자산 · 금융비용 · 감가상각비): 정기보고서 제출사는 전체 재무제표 API에서
-        for k, v in co.items():
-            f0 = v.get("fin")
-            if not f0 or f0.get("src"):
-                continue
-            for f in [f0] + ([f0["alt"]] if f0.get("alt") else []):
-                try:
-                    api_extra(D, v["corp_code"], f, "CFS" if f["basis"] == "연결" else "OFS", today)
-                except Exception as e:
-                    errors.append(f"재무지표 {k}: {str(e)[:60]}")
         # 연결이 기본인 회사의 별도 시리즈는 fin_s 로 따로 둔다(화면 전환 버튼용)
         for v in co.values():
             f = v.get("fin")
@@ -698,6 +662,42 @@ def collect(rows, prev, now, log=print):
                 v["fin_s"] = f.pop("alt")
             else:
                 v.pop("fin_s", None)
+        # 주요 재무지표용 추가 항목(총차입금 · 현금성자산 · 감가상각비 · 이자비용) — 원문에서, 접수번호 · 기준별로 저장
+        import concurrent.futures as cfu
+        import fin_ext
+        tasks = []
+        for k, v in co.items():
+            try:
+                tasks.append((k, v, ext_plan(D, v, today)))
+            except Exception as e:
+                errors.append(f"재무지표 원문 목록 {k}: {str(e)[:50]}")
+        need = {(no, cons) for _, _, plan in tasks for (_f, _p, no, cons, _i) in plan if f"x{int(cons)}:{no}" not in afs_cache
+                or afs_cache[f"x{int(cons)}:{no}"].get("v") != fin_ext.VERSION}
+
+        def _ext(job):
+            no, cons = job
+            try:
+                return job, fin_ext.extract(no, cons, log)
+            except Exception as e:
+                log(f"재무지표 원문 읽기 실패 {no}: {e}")
+                return job, None
+        with cfu.ThreadPoolExecutor(4) as ex:
+            for (no, cons), x in ex.map(_ext, sorted(need)):
+                if x:
+                    afs_cache[f"x{int(cons)}:{no}"] = x
+        for k, v, plan in tasks:
+            for f, p, no, cons, i in plan:
+                x = afs_cache.get(f"x{int(cons)}:{no}")
+                vals = (x or {}).get("periods") or []
+                e = vals[i] if i < len(vals) else {}
+                for kk, src in (("debt", "debt"), ("cash", "cash"), ("da", "da"), ("fc", "int")):  # 금융비용 = 이자비용
+                    p.pop(kk, None)
+                    if e.get(src) is not None:
+                        p[kk] = e[src]
+                ratios(p)
+                f.setdefault("xr", [])
+                if f"x{int(cons)}:{no}" not in f["xr"]:
+                    f["xr"].append(f"x{int(cons)}:{no}")
         # 회사 개요(기업개황)와 주주 현황 — 재무와 같은 주기로 갱신
         for k, v in co.items():
             try:
@@ -718,7 +718,7 @@ def collect(rows, prev, now, log=print):
             except Exception as e:
                 errors.append(f"주주 {k}: {str(e)[:60]}")
             time.sleep(0.1)
-    keep = {no for v in co.values() for f in (v.get("fin"), v.get("fin_s")) if f for no in f.get("rcepts", [])}
+    keep = {no for v in co.values() for f in (v.get("fin"), v.get("fin_s")) if f for no in f.get("rcepts", []) + f.get("xr", [])}
     keep |= {"sh4:" + v["sh"]["no"] for v in co.values() if v.get("sh") and v["sh"].get("no")}
     afs_cache = {r: x for r, x in afs_cache.items() if r in keep}
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")

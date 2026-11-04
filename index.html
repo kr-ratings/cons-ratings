@@ -994,7 +994,7 @@ let FINB="연결";
 const FINK=[["매출액","rev","amt",1],["EBIT","op","amt"],["EBITDA","ebitda","amt"],["당기순이익","ni","amt"],
   ["총자산","assets","amt",1],["총차입금","debt","amt"],["순차입금","nd","amt"],
   ["EBIT마진","opm","pct",1],["EBITDA마진","ebitdam","pct"],["EBITDA/금융비용","cov","x"],["순차입금/EBITDA","nde","x"],["부채비율","dr","pct"],["차입금의존도","dep","pct"]];
-const FIN_NOTE="EBIT = 영업이익, EBITDA = 영업이익 + 감가상각비(유형 · 무형 · 사용권자산 등), 총차입금 = 단기 · 장기차입금 + 사채 + 리스부채(유동성 포함), 순차입금 = 총차입금 − 현금및현금성자산 · 단기금융상품, 금융비용 = 손익계산서 금융비용(없으면 이자비용), 부채비율 = 부채총계 ÷ 자본총계, 차입금의존도 = 총차입금 ÷ 총자산";
+const FIN_NOTE="EBIT = 영업이익, EBITDA = 영업이익 + 감가상각비 · 무형자산상각비(사용권자산 · 투자부동산 포함, 현금흐름표 조정 항목 기준), 총차입금 = 단기 · 장기차입금 + 사채 + 리스부채(유동성 포함), 순차입금 = 총차입금 − 현금및현금성자산 · 단기금융상품, 금융비용 = 이자비용, 부채비율 = 부채총계 ÷ 자본총계, 차입금의존도 = 총차입금 ÷ 총자산. 차입금 · 현금 · 감가상각비 · 이자비용은 DART 원문의 재무상태표 · 현금흐름표 · 주석에서 읽은 값이며, 찾지 못한 항목은 – 로 표시";
 function finSel(dc){ return dc?(FINB==="별도"&&dc.fin_s?dc.fin_s:dc.fin)||null:null; }
 function finOf(reg){ return finSel(DART&&DART.co&&DART.co[reg]); }
 function finPeriods(f){
