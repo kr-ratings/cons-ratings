@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 import audit_fs
 
-VERSION = 4
+VERSION = 5
 _sp = audit_fs._sp
 
 DEBT = re.compile(r"차입금|사채|리스부채|유동화채무|유동성장기부채|^장기부채$")  # '유동차입금(사채포함)', '단기차입금및유동성차입금' 같은 이름도
@@ -290,6 +290,9 @@ def extract(rcept_no, cons, log=print):
                         if len(got_) >= 2 and has_b(got_):
                             seen = got_
                             break
+                GEN = {"차입금", "장기부채", "사채및차입금", "차입금및사채"}  # 합계 행 — 세부 항목이 있으면 빼야 이중으로 더하지 않는다
+                if any(l not in GEN and re.search(r"차입금|사채", l) for l in seen):
+                    seen = {l: v for l, v in seen.items() if l not in GEN}
                 if len(seen) >= 2:
                     per[0]["debt"] = round(sum(seen.values()), 1)
                     debt_note = False

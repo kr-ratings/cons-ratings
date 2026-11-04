@@ -718,7 +718,7 @@ def collect(rows, prev, now, log=print):
                         p[kk] = val
                 # 앞뒤가 맞지 않는 값은 쓰지 않는다(원문 표를 잘못 읽은 경우): 차입금 > 부채총계, 현금성자산 > 자산총계,
                 # 차입금이 100억원 이상인데 이자비용이 차입금의 0.3%도 안 되는 경우
-                if p.get("debt") is not None and p.get("liab") is not None and p["debt"] > p["liab"]:
+                if p.get("debt") is not None and (p["debt"] < 0 or (p.get("liab") is not None and p["debt"] > p["liab"])):
                     p.pop("debt")
                 if p.get("cash") is not None and p.get("assets") is not None and p["cash"] > p["assets"]:
                     p.pop("cash")
