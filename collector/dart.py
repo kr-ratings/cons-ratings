@@ -216,17 +216,17 @@ def financials(D, codes, today):
                             ent["periods"].append(h)
                             have[f"{y}"] = h
                         elif c < h["_c"]:  # 더 이른(그해) 보고서 값으로 바꾼다
-                            if h["_c"] == 1:
-                                h["_r1"] = {k: h.get(k) for k in vals}
-                                h["_rc1"] = h.get("_rc")
+                            if h["_c"] in (1, 2) and f"_r{h['_c']}" not in h:
+                                h[f"_r{h['_c']}"] = {k: h.get(k) for k in vals}
+                                h[f"_rc{h['_c']}"] = h.get("_rc")
                             for k, v in vals.items():
                                 if v is not None:
                                     h[k] = v
                             h["_c"] = c
                         else:
-                            if c == 1 and "_r1" not in h:
-                                h["_r1"] = dict(vals)
-                                h["_rc1"] = rc
+                            if c in (1, 2) and f"_r{c}" not in h:
+                                h[f"_r{c}"] = dict(vals)
+                                h[f"_rc{c}"] = rc
                             for k, v in vals.items():  # 빈 항목만 채운다
                                 if h.get(k) is None and v is not None:
                                     h[k] = v
@@ -354,13 +354,16 @@ KIFRS1 = re.compile(r"과거회계기준\W{0,4}에서\s*한국채택국제회계
                     r"|한국채택국제회계기준\s*(?:으로의\s*)?전환일\W{0,3}(\d{4})\s*년\s*1\s*월\s*1\s*일")
 
 
-def ifrs_switch(f, cache, log=print):
+def ifrs_switch(f, cache, log=print, biz=None):
     """그해 보고서 값과 다음 해 보고서 전기 값의 자산총계가 2% 넘게 다른 해: 다음 해 보고서가 K-IFRS 최초 채택이고
     전환일이 그해 1월 1일이면 그해 숫자를 다음 해 보고서 전기 값으로 바꾸고(k1 = 그 보고서 접수번호), 그 이전 연도는 뺀다"""
     import audit_fs
     fy = sorted((p for p in f["periods"] if p["t"] == "FY"), key=lambda p: p["p"], reverse=True)
     for p in fy:
+        # 다음 해 보고서 전기 값(_r1), 그 보고서가 재무 API에 없으면 2년 뒤 보고서 전전기 값(_r2)
         r1, rc1 = p.get("_r1"), p.get("_rc1")
+        if not r1 and p.get("_r2") and biz:
+            r1, rc1 = p["_r2"], biz(int(p["p"]) + 1)
         a0, a1 = p.get("assets"), (r1 or {}).get("assets")
         if not r1 or not rc1 or a0 is None or a1 is None or abs(a0 - a1) <= 0.02 * abs(a1):
             continue
@@ -729,16 +732,30 @@ def collect(rows, prev, now, log=print):
                 v.pop("fin_s", None)
         # 회계기준 전환(일반기업회계기준 → K-IFRS 최초 채택): 전환 전 해의 숫자는 전환한 해 보고서의 전기(K-IFRS 재작성) 값을 쓰고,
         # 그보다 이전(옛 기준) 연도는 시리즈에서 뺀다 — 한 시리즈 안에 회계기준이 섞이지 않게
+        since7 = (today - dt.timedelta(days=365 * 7)).strftime("%Y%m%d")
+        _biz = {}
+
+        def biz_of(cc):
+            def get(y):  # 그해 사업보고서 접수번호(필요할 때만 목록 조회)
+                if cc not in _biz:
+                    reps = _reports(D, cc, since7, "A", BIZ_RX, "biz")
+                    by = {}
+                    for r in reps.values():
+                        if r["y"] not in by or r["no"] > by[r["y"]]:
+                            by[r["y"]] = r["no"]
+                    _biz[cc] = by
+                return _biz[cc].get(y)
+            return get
         for k, v in co.items():
             for f in (v.get("fin"), v.get("fin_s")):
                 if not f:
                     continue
                 try:
-                    ifrs_switch(f, afs_cache, log)
+                    ifrs_switch(f, afs_cache, log, biz_of(v["corp_code"]))
                 except Exception as e:
                     errors.append(f"회계기준 전환 점검 {k}: {str(e)[:50]}")
                 for p in f["periods"]:
-                    for x in ("_c", "_r1", "_rc", "_rc1"):
+                    for x in ("_c", "_r1", "_r2", "_rc", "_rc1", "_rc2"):
                         p.pop(x, None)
         # 주요 재무지표용 추가 항목(총차입금 · 현금성자산 · 감가상각비 · 이자비용) — 원문에서, 접수번호 · 기준별로 저장
         import concurrent.futures as cfu
