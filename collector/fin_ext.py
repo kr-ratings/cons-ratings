@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 import audit_fs
 
-VERSION = 5
+VERSION = 6
 _sp = audit_fs._sp
 
 DEBT = re.compile(r"차입금|사채|리스부채|유동화채무|유동성장기부채|^장기부채$")  # '유동차입금(사채포함)', '단기차입금및유동성차입금' 같은 이름도
@@ -297,9 +297,11 @@ def extract(rcept_no, cons, log=print):
                     per[0]["debt"] = round(sum(seen.values()), 1)
                     debt_note = False
             collect_flows(flows, nm, True)
-    if fin_liab and debt_note:  # 차입금을 금융부채로 묶은 재무상태표인데 주석에서 차입금 구성을 못 찾음 → 일부만 더한 값은 쓰지 않는다
-        for e in per:
+    if fin_liab:  # 차입금을 금융부채로 묶은 재무상태표: 재무상태표만으로는 일부(리스부채 등)만 잡히므로
+        for e in per[1:]:  # 주석에서 읽는 당기 외의 기간은 쓰지 않는다
             e.pop("debt", None)
+        if debt_note:  # 주석에서도 차입금 구성을 못 찾음
+            per[0].pop("debt", None)
     best = (cand_da or cand_da2 or [None])[0]
     if best:
         take(best, ("da", "int"))
