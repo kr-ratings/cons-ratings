@@ -349,50 +349,6 @@ def _reports(D, corp_code, since, ty, rx, kind):
     return out
 
 
-# K-IFRS 최초 채택 보고서: '과거회계기준에서 한국채택국제회계기준으로의 전환일은 2021년 1월 1일' — 전환일 연도를 함께 읽는다
-KIFRS1 = re.compile(r"과거회계기준\W{0,4}에서\s*한국채택국제회계기준으로의\s*전환일은\s*(\d{4})\s*년\s*1\s*월\s*1\s*일"
-                    r"|한국채택국제회계기준\s*(?:으로의\s*)?전환일\W{0,3}(\d{4})\s*년\s*1\s*월\s*1\s*일")
-
-
-def ifrs_switch(f, cache, log=print, biz=None):
-    """그해 보고서 값과 다음 해 보고서 전기 값의 자산총계가 2% 넘게 다른 해: 다음 해 보고서가 K-IFRS 최초 채택이고
-    전환일이 그해 1월 1일이면 그해 숫자를 다음 해 보고서 전기 값으로 바꾸고(k1 = 그 보고서 접수번호), 그 이전 연도는 뺀다"""
-    import audit_fs
-    fy = sorted((p for p in f["periods"] if p["t"] == "FY"), key=lambda p: p["p"], reverse=True)
-    for p in fy:
-        # 다음 해 보고서 전기 값(_r1), 그 보고서가 재무 API에 없으면 2년 뒤 보고서 전전기 값(_r2)
-        r1, rc1 = p.get("_r1"), p.get("_rc1")
-        if not r1 and p.get("_r2") and biz:
-            r1, rc1 = p["_r2"], biz(int(p["p"]) + 1)
-        a0, a1 = p.get("assets"), (r1 or {}).get("assets")
-        if not r1 or not rc1 or a0 is None or a1 is None or abs(a0 - a1) <= 0.02 * abs(a1):
-            continue
-        key = f"k:{rc1}"
-        if key not in cache or cache[key].get("v") != 2:
-            flag = False
-            nodes = [n for n in audit_fs._nodes(rc1) if n.get("dcmNo")]
-            for n in [n for n in nodes if re.search(r"주석$", n["text"])][:2]:
-                r = audit_fs._get(f"{audit_fs.VIEW}/report/viewer.do",
-                                  params={"rcpNo": rc1, "dcmNo": n["dcmNo"], "eleId": n["eleId"], "offset": n["offset"],
-                                          "length": n["length"], "dtd": n["dtd"]})
-                t = re.sub(r"<[^>]+>", "", re.sub(r"\s+", " ", r.content.decode("utf-8", "ignore")))
-                m = KIFRS1.search(t)
-                if m and "최초채택" in t.replace(" ", ""):
-                    flag = int(m.group(1) or m.group(2))  # 전환일 연도
-                    break
-            cache[key] = {"v": 2, "k": flag}
-            time.sleep(0.3)
-        if cache[key].get("k") == int(p["p"]):
-            log(f"K-IFRS 최초 채택: {p['p']}년은 {rc1} 전기 값")
-            for kk, vv in r1.items():
-                if vv is not None:
-                    p[kk] = vv
-            p["k1"] = rc1
-            ratios(p)
-            f["periods"] = [q for q in f["periods"] if q["t"] != "FY" or q["p"] >= p["p"]]
-            return
-
-
 def ext_plan(D, v, today):
     """회사 하나의 재무 시리즈(기본 · 별도)마다 [(시리즈, 기간, 원문 접수번호, 연결 여부, 원문 안 기간 순번)]
     — 사업연도는 그해 보고서(사업보고서 또는 같은 기준 감사보고서)의 당기, 없으면 다음 해 보고서의 전기. 분기는 그 분기보고서."""
@@ -418,9 +374,7 @@ def ext_plan(D, v, today):
                     out.append((f, p, f["q_rcept"], cons, 0))
                 continue
             y = int(p["p"])
-            if p.get("k1"):  # 회계기준 전환 전 해: 전환한 해 보고서의 전기 칸
-                out.append((f, p, p["k1"], cons, 1))
-            elif y in by_y:
+            if y in by_y:
                 out.append((f, p, by_y[y]["no"], cons, 0))
             elif y + 1 in by_y:
                 out.append((f, p, by_y[y + 1]["no"], cons, 1))
@@ -730,31 +684,38 @@ def collect(rows, prev, now, log=print):
                 v["fin_s"] = f.pop("alt")
             else:
                 v.pop("fin_s", None)
-        # 회계기준 전환(일반기업회계기준 → K-IFRS 최초 채택): 전환 전 해의 숫자는 전환한 해 보고서의 전기(K-IFRS 재작성) 값을 쓰고,
-        # 그보다 이전(옛 기준) 연도는 시리즈에서 뺀다 — 한 시리즈 안에 회계기준이 섞이지 않게
+        # 재무 API에 그해 사업보고서가 없는 연도(다음 해 이후 보고서의 전기 칸으로만 채운 연도)는
+        # 그해 사업보고서 원문 재무제표의 당기 값으로 바꾼다 — 사업연도 숫자는 그해 최초 공시 기준
         since7 = (today - dt.timedelta(days=365 * 7)).strftime("%Y%m%d")
-        _biz = {}
-
-        def biz_of(cc):
-            def get(y):  # 그해 사업보고서 접수번호(필요할 때만 목록 조회)
-                if cc not in _biz:
-                    reps = _reports(D, cc, since7, "A", BIZ_RX, "biz")
+        for k, v in co.items():
+            series = [f for f in (v.get("fin"), v.get("fin_s")) if f and not f.get("src")]
+            late = [(f, p) for f in series for p in f["periods"] if p["t"] == "FY" and p.get("_c", 0) > 0]
+            if late:
+                try:
+                    reps = _reports(D, v["corp_code"], since7, "A", BIZ_RX, "biz")
                     by = {}
                     for r in reps.values():
                         if r["y"] not in by or r["no"] > by[r["y"]]:
                             by[r["y"]] = r["no"]
-                    _biz[cc] = by
-                return _biz[cc].get(y)
-            return get
-        for k, v in co.items():
-            for f in (v.get("fin"), v.get("fin_s")):
-                if not f:
-                    continue
-                try:
-                    ifrs_switch(f, afs_cache, log, biz_of(v["corp_code"]))
+                    for f, p in late:
+                        no = by.get(int(p["p"]))
+                        if not no:
+                            continue
+                        cons = f["basis"] == "연결"
+                        x, key = _parse_cached(afs_cache, no, cons, log)
+                        e = ((x or {}).get("periods") or [{}])[0]
+                        if x and bool(x.get("consolidated")) == cons and e.get("assets") is not None:
+                            for kk in ("rev", "op", "ni", "assets", "liab", "equity"):
+                                if e.get(kk) is not None:
+                                    p[kk] = e[kk]
+                            ratios(p)
+                            f.setdefault("rcepts", [])
+                            if key not in f["rcepts"]:
+                                f["rcepts"].append(key)
                 except Exception as e:
-                    errors.append(f"회계기준 전환 점검 {k}: {str(e)[:50]}")
-                for p in f["periods"]:
+                    errors.append(f"그해 원문 재무 {k}: {str(e)[:50]}")
+            for f in (v.get("fin"), v.get("fin_s")):
+                for p in (f or {}).get("periods", []):
                     for x in ("_c", "_r1", "_r2", "_rc", "_rc1", "_rc2"):
                         p.pop(x, None)
         # 주요 재무지표용 추가 항목(총차입금 · 현금성자산 · 감가상각비 · 이자비용) — 원문에서, 접수번호 · 기준별로 저장
@@ -844,7 +805,6 @@ def collect(rows, prev, now, log=print):
             time.sleep(0.1)
     keep = {no for v in co.values() for f in (v.get("fin"), v.get("fin_s")) if f for no in f.get("rcepts", []) + f.get("xr", [])}
     keep |= {"sh4:" + v["sh"]["no"] for v in co.values() if v.get("sh") and v["sh"].get("no")}
-    keep |= {r for r in afs_cache if r.startswith("k:") and (f"x0:{r[2:]}" in keep or f"x1:{r[2:]}" in keep)}
     afs_cache = {r: x for r, x in afs_cache.items() if r in keep}
     log(f"DART 호출 {D.calls}회 · 매핑 {len(ids)}개사 · 공시 {sum(len(v['disc']) for v in co.values())}건 · 재무 {sum(1 for v in co.values() if v.get('fin'))}개사")
     return {"generated": now.strftime("%Y-%m-%d %H:%M"), "fin_checked": fin_checked, "co": co, "errors": errors, "afs": afs_cache,
