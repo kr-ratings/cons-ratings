@@ -1204,23 +1204,24 @@ function appendixXML(r){
   const reg=regOf(r), dc=DART&&DART.co&&DART.co[reg], i=(dc&&dc.info)||{}, b=blOf(reg), out=[];
   const nm=i.nm||r.name;
   out.push(WX.gap(2), WX.title("Appendix. 시공사 개요"), WX.gap(4));
+  // 내용이 없는 항목은 제목째 빼고, 남은 항목만 1부터 차례로 번호를 붙인다
+  let no=0;
+  const sec=(title,parts)=>{ if(parts.length) out.push(WX.h(`${++no}. ${title}`),...parts); };
   // 1. 회사 개요
-  out.push(WX.h("1. 회사 개요"));
   const est=i.est&&/^\d{8}$/.test(i.est)?`${i.est.slice(0,4)}년 ${i.est.slice(4,6)}월 ${i.est.slice(6)}일`:"-";
   const bg=AG.map(a=>({a,...(r.ratings[a]||{}),kind:(r.ratings[a]||{}).kind||"bond"})).filter(x=>x.grade).sort((x,y)=>gi(x)-gi(y))[0];
-  const rt=bg?`${bg.grade}${bg.kind!=="bond"?` ${KINDS[bg.kind]}`:""}(${AGF[bg.a]}${bg.date?` / ${bg.date.replace(/-/g,".")}`:""})`:"공시 등급 없음";
-  out.push(WX.table([1418,3118,2410,3256],[
+  const rt=bg?`${bg.grade}${bg.kind!=="bond"?` ${KINDS[bg.kind]}`:""}(${AGF[bg.a]}${bg.date?` / ${bg.date.replace(/-/g,".")}`:""})`:"-";
+  sec("회사 개요",[WX.table([1418,3118,2410,3256],[
     [H("구 분"),H("내 용"),H("구 분"),H("내 용")],
     [L("회사명"),V(nm),L("대표이사"),V((i.ceo||"-").replace(/\s*,\s*/g,", "))],
     [L("설립일"),V(est),L("업종"),V(ksic(i.ind))],
     [L("신용등급"),V(rt),L("도급순위"),V(`${r.rank}위 (${META.year}년 기준)`)],
     [L("주소"),{t:i.adres||"-",span:3}],
-  ]));
+  ])]);
   // 2. 주주 현황
-  out.push(WX.h("2. 주주 현황"));
-  const sh=dc&&dc.sh;
-  if(sh){
-    out.push(WX.note(`(단위: %, ${sh.asof?`기준일: ${sh.asof.replace(/-/g,".")}, `:""}출처: Dart 공시 ${sh.src||""}, 보통주 기준)`));
+  const sh=dc&&dc.sh, s2=[];
+  if(sh&&sh.list&&sh.list.length){
+    s2.push(WX.note(`(단위: %, ${sh.asof?`기준일: ${sh.asof.replace(/-/g,".")}, `:""}출처: Dart 공시 ${sh.src||""}, 보통주 기준)`));
     // 비고 열은 공란(심의서에서 직접 쓰는 칸)
     const hasRel=sh.list.some(x=>x.rel), w=hasRel?[3300,2900,1600,2402]:[4600,1800,3802];
     const rows=[hasRel?[H("주주명"),H("관계"),H("지분율"),H("비고")]:[H("주주명"),H("지분율"),H("비고")]];
@@ -1229,43 +1230,46 @@ function appendixXML(r){
     if(sh.treasury) rows.push(row("자기주식","",sh.treasury));
     if(sh.etc) rows.push(row("기타","",sh.etc));
     rows.push(row("합계","",100,1));
-    out.push(WX.table(w,rows));
-  } else out.push(WX.p("감사보고서와 DART 공시에 주주별 지분 구성이 공개되어 있지 않습니다.",{sz:18}));
+    s2.push(WX.table(w,rows));
+  }
+  sec("주주 현황",s2);
   // 3. 주요 재무지표
-  out.push(WX.h(`3. ${MR()?"주요 재무지표":"요약 재무제표"}`));
-  const f=finSel(dc), ps=finPeriods(f);
+  const f=finSel(dc), ps=finPeriods(f), s3=[];
   if(ps.length){
-    out.push(WX.note(`(단위: 억원, 배, %, 기준: ${f.basis}, 출처: Dart 공시${f.src&&f.src!=="사업보고서"?` ${f.src}`:""})`));
+    s3.push(WX.note(`(단위: 억원, 배, %, 기준: ${f.basis}, 출처: Dart 공시${f.src&&f.src!=="사업보고서"?` ${f.src}`:""})`));
     const cw=Math.floor((W_FULL-1418)/ps.length), widths=[1418,...ps.map((_,k)=>k<ps.length-1?cw:W_FULL-1418-cw*(ps.length-1))];
     const K=finK().map(([lb,k,t,g])=>[lb,k,t==="amt"?wn:wp,g]);
     // 'EBITDA/금융비용' · '순차입금/EBITDA'는 '/' 뒤에서 줄을 바꾼다(칸 안에서 단어가 잘리지 않게)
-    out.push(WX.table(widths,[[H("구 분"),...ps.map(p=>H(wPer(p)))],...K.map(([lb,k,fm,g],i)=>[L(lb.replace("/","/\n")),...ps.map(p=>N(fm(p[k])))].map(c=>g&&i?{...c,top:12}:c))]));
-  } else out.push(WX.p("DART에서 이 회사의 재무를 찾지 못했습니다.",{sz:18}));
+    s3.push(WX.table(widths,[[H("구 분"),...ps.map(p=>H(wPer(p)))],...K.map(([lb,k,fm,g],i)=>[L(lb.replace("/","/\n")),...ps.map(p=>N(fm(p[k])))].map(c=>g&&i?{...c,top:12}:c))]));
+  }
+  sec(MR()?"주요 재무지표":"요약 재무제표",s3);
   // 4. 수주 현황
   const src=b?`Dart 공시 ${b.kind==="aud"?"":""}${b.nm||""}`:"Dart 공시";
-  out.push(WX.h(`4. 수주 현황${b&&b.asof?` (${b.asof.replace(".","년 ")}월말 기준)`:""}`));
-  const o=b&&b.ord;
-  if(o&&o.kind==="list"){
+  const asof=b&&b.asof?` (${b.asof.replace(".","년 ")}월말 기준)`:"";
+  const o=b&&b.ord, s4=[], push4=(...x)=>s4.push(...x);
+  if(o&&o.kind==="list"&&ordRows(o).length){
     const R=ordRows(o).sort((a,c)=>(c.rem??-1)-(a.rem??-1)), Sm=o.sum;
-    out.push(WX.note(`(단위: 억원, 출처: ${src} 수주상황, 현장 ${R.length}개 전체)`));
+    push4(WX.note(`(단위: 억원, 출처: ${src} 수주상황, 현장 ${R.length}개 전체)`));
     const w=[900,2550,1900,950,950,1000,1000,952];
     const rows=[[H("구분"),H("공사명"),H("발주처"),H("계약일"),H("완공예정"),H("도급액"),H("계약잔액"),H("기성률")]];
     R.forEach(x=>rows.push([V(x.g||""),V(x.nm||x.own||"","left"),V(x.own&&x.own!==x.nm?x.own:"","left"),V(wd(x.cd)),V(wd(x.ed)),N(wn(x.amt)),N(wn(x.rem)),N(x.pr==null?"-":Math.min(100,x.pr).toFixed(0)+"%")]));
     rows.push([S("합계",undefined),S(""),S(""),S(""),S(""),S(Sm.amt?wn(Sm.amt):"","right"),S(wn(Sm.rem),"right"),S(Sm.amt&&Sm.done?Math.min(100,Sm.done/Sm.amt*100).toFixed(0)+"%":"","right")]);
     rows[rows.length-1]=[{t:"합계",kind:"sum",span:5},rows[rows.length-1][5],rows[rows.length-1][6],rows[rows.length-1][7]];
-    out.push(WX.table(w,rows,{sz:16,line:220}));
-    out.push(WX.p("주) 원문 수주상황 표의 현장 전체이며 합계는 표에 실린 현장 기준 / 기성률 = 기성(완성공사액) ÷ 도급액",{sz:16,spacing:'<w:spacing w:before="40"/>'}));
-  } else if(o){
+    push4(WX.table(w,rows,{sz:16,line:220}));
+    push4(WX.p("주) 원문 수주상황 표의 현장 전체이며 합계는 표에 실린 현장 기준 / 기성률 = 기성(완성공사액) ÷ 도급액",{sz:16,spacing:'<w:spacing w:before="40"/>'}));
+  } else if(o&&o.kind!=="list"&&o.rows&&o.rows.length){
     const ks=[["amt","총도급액"],["beg","기초 잔액"],["new","신규·증감"],["rev","수익 인식"],["end","기말 잔액"]].filter(([k])=>o.rows.some(x=>x[k]!=null));
-    out.push(WX.note(`(단위: 억원, 출처: Dart 공시 ${b.nm||"감사보고서"} 주석 공사계약 잔액)`));
+    push4(WX.note(`(단위: 억원, 출처: Dart 공시 ${b.nm||"감사보고서"} 주석 공사계약 잔액)`));
     const lw=3400, cw=Math.floor((W_FULL-lw)/ks.length), w=[lw,...ks.map((_,k)=>k<ks.length-1?cw:W_FULL-lw-cw*(ks.length-1))];
     const rows=[[H("구분"),...ks.map(k=>H(k[1]))],...o.rows.map(x=>[V(x.nm,"left"),...ks.map(([k])=>N(wn(x[k])))])];
     if(o.rows.length>1) rows.push([S("합계"),...ks.map(([k])=>S(wn(o.sum[k]),"right"))]);
-    out.push(WX.table(w,rows,{sz:16,line:220}));
-  } else out.push(WX.p(b?"최근 원문에 현장별 수주 표가 없습니다.":"DART에서 이 회사의 수주 자료를 찾지 못했습니다.",{sz:18}));
-  // 5. 보증·약정 현황
-  out.push(WX.h(`5. 보증·약정 현황${b&&b.asof?` (${b.asof.replace(".","년 ")}월말 기준)`:""}`));
-  const c=b&&b.cg;
+    push4(WX.table(w,rows,{sz:16,line:220}));
+  }
+  sec("수주 현황"+asof,s4);
+  // 5. 보증·약정 현황 — 아래 표들을 모은 뒤 하나라도 있으면 제목을 붙인다
+  const c0=b&&b.cg, out0=out.length;
+  // 빈 목록(0건)은 없는 것으로 본다
+  const c=c0&&{...c0,pf:c0.pf&&c0.pf.length?c0.pf:null,spc:c0.spc&&c0.spc.length?c0.spc:null,raw:(c0.raw||[]).filter(t=>t.rows&&t.rows.length)};
   if(c){
     // 요약표: 유형별 건수 · 금액을 칸마다 따로
     const sm=c.sum||{}, Ls=[], sum=(xs,k)=>xs.some(x=>x[k]!=null)?xs.reduce((a,x)=>a+(x[k]||0),0):null;
@@ -1321,7 +1325,9 @@ function appendixXML(r){
       const amtCol=P.map((p,j)=>j>0&&!/일자$|일$|기간$|건수|수량|율|%|비고|연도|년도/.test(leafOf(p))&&!/건수|율|%/.test(p.join("")));
       const conv=(v,j)=>{ if(!div||!amtCol[j]) return v; const s2=String(v).replace(/\s/g,""); if(!/^\(?[-△]?[\d,]+\)?$/.test(s2)||!/\d{3}/.test(s2)) return v;
         const n=+s2.replace(/[(),△-]/g,""), neg=/^\(|^[-△]/.test(s2); return wn((neg?-1:1)*n/div); };
-      const cap=String(t.cap||"제공한 보증 · 약정").replace(/^\s*(?:[가-하]\.|\(?\d+(?:-\d+)?\)|\d+\.|[①-⑳])\s*/,"");
+      const cap1=String(t.cap||"").replace(/^\s*(?:[가-하]\.|\(?\d+(?:-\d+)?\)|\d+\.|[①-⑳])\s*/,"").trim();
+      // 원문 표 앞 문장(예: '…보증 내역은 없습니다.')이 제목으로 잡힌 경우는 일반 제목으로
+      const cap=!cap1||cap1.length>40||/다\.?$|없음|없습니다/.test(cap1)?"제공한 보증 · 약정":cap1;
       out.push(WX.sub(cap), WX.note(div?"(단위: 억원)":`(단위: ${t.unit||"원문 단위"})`));
       const n=P.length, body=rows0.map(rw=>Array.from({length:n},(_,j)=>conv(rw[j]??"",j)));
       const head=[], leafSpan={}; // 같은 이름이 잇단 맨 아래 머리글(예: 구분 | 구분)은 한 칸으로 합친다
@@ -1346,8 +1352,9 @@ function appendixXML(r){
       const isNum=v=>/\d/.test(v)&&/^[\d,.()\-△▲%\s]+$/.test(v);
       out.push(WX.table(w,[...head,...body.map(rw=>rw.map((v,j)=>isNum(v)?N(v):V(v,j===0?"left":"center")))],{sz:16,line:220}));
     });
-    out.push(WX.p("주) 회사가 타인을 위하여 제공한 보증·약정만 기재(소송·담보·제공받은 보증 제외)",{sz:16,spacing:'<w:spacing w:before="40"/>'}));
-  } else out.push(WX.p(b?"최근 원문에 타인을 위하여 제공한 보증·약정 표가 없습니다.":"DART에서 이 회사의 자료를 찾지 못했습니다.",{sz:18}));
+    if(out.length>out0) out.push(WX.p("주) 회사가 타인을 위하여 제공한 보증·약정만 기재(소송·담보·제공받은 보증 제외)",{sz:16,spacing:'<w:spacing w:before="40"/>'}));
+  }
+  if(out.length>out0) out.splice(out0,0,WX.h(`${++no}. 보증·약정 현황${asof}`));
   return out.join("");
 }
 async function appendixDOCX(r){
