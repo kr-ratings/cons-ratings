@@ -687,7 +687,7 @@ def collect(rows, prev, now, log=print):
             except Exception as e:
                 log(f"재무지표 원문 읽기 실패 {no}: {e}")
                 return job, None
-        with cfu.ThreadPoolExecutor(6) as ex:
+        with cfu.ThreadPoolExecutor(2) as ex:  # 공시뷰어가 동시 접속을 끊어서 2개만
             for (no, cons), x in ex.map(_ext, sorted(need)):
                 if x:
                     afs_cache[f"x{int(cons)}:{no}"] = x
