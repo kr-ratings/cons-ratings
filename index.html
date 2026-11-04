@@ -1238,12 +1238,9 @@ function appendixXML(r){
     out.push(WX.note(`(단위: 억원, 배, %, 기준: ${f.basis}, 출처: Dart 공시${f.src&&f.src!=="사업보고서"?` ${f.src}`:""})`));
     const cw=Math.floor((W_FULL-1418)/ps.length), widths=[1418,...ps.map((_,k)=>k<ps.length-1?cw:W_FULL-1418-cw*(ps.length-1))];
     const K=finK().map(([lb,k,t,g])=>[lb,k,t==="amt"?wn:wp,g]);
-    out.push(WX.table(widths,[[H("구 분"),...ps.map(p=>H(wPer(p)))],...K.map(([lb,k,fm,g],i)=>[L(lb),...ps.map(p=>N(fm(p[k])))].map(c=>g&&i?{...c,top:12}:c))]));
-    const notes=[];
-    if(ps.some(p=>p.t!=="FY")) notes.push("분기·반기 열은 해당 연도 누적 실적과 분기말 재무상태(순차입금/EBITDA는 EBITDA 연환산)");
-    if(ps.some(p=>p.b)) notes.push("* 표시 연도는 "+[...new Set(ps.filter(p=>p.b).map(p=>p.b))].join("·")+" 기준");
-    notes.push(finNote());
-    out.push(WX.p("주) "+notes.join(" / "),{sz:16,spacing:'<w:spacing w:before="40"/>'}));
+    // 'EBITDA/금융비용' · '순차입금/EBITDA'는 '/' 뒤에서 줄을 바꾼다(칸 안에서 단어가 잘리지 않게)
+    out.push(WX.table(widths,[[H("구 분"),...ps.map(p=>H(wPer(p)))],...K.map(([lb,k,fm,g],i)=>[L(lb.replace("/","/\n")),...ps.map(p=>N(fm(p[k])))].map(c=>g&&i?{...c,top:12}:c))]));
+    if(ps.some(p=>p.b)) out.push(WX.p("주) * 표시 연도는 "+[...new Set(ps.filter(p=>p.b).map(p=>p.b))].join("·")+" 기준",{sz:16,spacing:'<w:spacing w:before="40"/>'}));
   } else out.push(WX.p("DART에서 이 회사의 재무를 찾지 못했습니다.",{sz:18}));
   // 4. 수주 현황
   const src=b?`Dart 공시 ${b.kind==="aud"?"":""}${b.nm||""}`:"Dart 공시";
