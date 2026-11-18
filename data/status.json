@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-17 13:47",
+ "generated": "2026-11-18 12:53",
  "sources": {
   "대한건설협회": {
    "ok": true,
@@ -16,8 +16,7 @@
    "ok": true
   },
   "기사": {
-   "ok": false,
-   "error": "검색 1건 실패"
+   "ok": true
   },
   "공사비지수": {
    "ok": true
