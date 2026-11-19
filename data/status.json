@@ -1,5 +1,5 @@
 {
- "generated": "2026-11-18 12:53",
+ "generated": "2026-11-19 12:51",
  "sources": {
   "대한건설협회": {
    "ok": true,
@@ -13,7 +13,8 @@
    "ok": true
   },
   "NICE": {
-   "ok": true
+   "ok": false,
+   "error": "68개사 수집 실패(직전 값 유지)"
   },
   "기사": {
    "ok": true
